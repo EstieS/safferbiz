@@ -63,13 +63,20 @@ export default function ListingCard({ listing }: Props) {
           </div>
         )}
 
-        <div className="mt-3 flex items-center justify-between">
-          <span
-            className="text-xs font-medium px-2 py-1 rounded-full"
-            style={{ backgroundColor: '#007A4D20', color: '#007A4D' }}
-          >
-            {listing.category}
-          </span>
+        <div className="mt-3 flex items-center justify-between flex-wrap gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
+            <span
+              className="text-xs font-medium px-2 py-1 rounded-full"
+              style={{ backgroundColor: '#007A4D20', color: '#007A4D' }}
+            >
+              {listing.category}
+            </span>
+            {listing.sells_online && (
+              <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                🛒 Online
+              </span>
+            )}
+          </div>
           <span className="text-xs text-gray-400 group-hover:text-green-600 transition-colors">
             View →
           </span>

@@ -5,7 +5,7 @@ import { slugify } from '@/lib/slugify'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { business_name, description, category, country, city, website_url, facebook_url, instagram_url, email, tags } = body
+    const { business_name, description, category, country, city, website_url, facebook_url, instagram_url, email, tags, sells_online } = body
 
     if (!business_name || !description || !category || !country || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
       instagram_url: instagram_url?.trim() || null,
       email: email.trim(),
       tags: Array.isArray(tags) ? tags : [],
+      sells_online: sells_online === true,
       status: 'pending',
     })
 

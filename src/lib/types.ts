@@ -15,6 +15,7 @@ export interface Listing {
   email: string | null
   status: ListingStatus
   tags: string[]
+  sells_online: boolean
   created_at: string
   updated_at: string
 }

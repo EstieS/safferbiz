@@ -85,6 +85,22 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Online stores CTA */}
+      <section className="py-6 px-4 bg-blue-50 border-b border-blue-100">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-blue-900 text-sm">🛒 Shop from home — wherever you are</p>
+            <p className="text-xs text-blue-700 mt-0.5">Browse SA businesses that accept online orders and deliver to you</p>
+          </div>
+          <Link
+            href="/online"
+            className="flex-shrink-0 px-5 py-2 rounded-full text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            View Online Stores →
+          </Link>
+        </div>
+      </section>
+
       {/* Popular products */}
       <section className="py-8 px-4 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto">

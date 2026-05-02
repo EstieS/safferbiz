@@ -10,6 +10,7 @@ export default function SubmitForm() {
   const [errorMsg, setErrorMsg] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [customTag, setCustomTag] = useState('')
+  const [sellsOnline, setSellsOnline] = useState(false)
 
   function toggleTag(tag: string) {
     setSelectedTags((prev) =>
@@ -37,7 +38,7 @@ export default function SubmitForm() {
       const res = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, tags: selectedTags }),
+        body: JSON.stringify({ ...data, tags: selectedTags, sells_online: sellsOnline }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Submission failed')
@@ -133,6 +134,23 @@ export default function SubmitForm() {
           className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-green-500"
           placeholder="e.g. Melbourne"
         />
+      </div>
+
+      <div
+        onClick={() => setSellsOnline(!sellsOnline)}
+        className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+          sellsOnline ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-blue-300 bg-white'
+        }`}
+      >
+        <div className={`mt-0.5 w-5 h-5 rounded flex-shrink-0 flex items-center justify-center border-2 transition-all ${
+          sellsOnline ? 'bg-blue-500 border-blue-500' : 'border-gray-300'
+        }`}>
+          {sellsOnline && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-800">🛒 This business accepts online orders</p>
+          <p className="text-xs text-gray-500 mt-0.5">Check this if customers can browse and order from your website (even if you also have a physical store)</p>
+        </div>
       </div>
 
       {/* Products / Tags */}

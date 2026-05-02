@@ -91,6 +91,15 @@ export default function AdminDashboard({ listings: initial }: { listings: Listin
     setBusy(null)
   }
 
+  async function toggleOnline(id: string, sells_online: boolean) {
+    await fetch(`/api/admin/listings/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sells_online }),
+    })
+    setListings((prev) => prev.map((l) => (l.id === id ? { ...l, sells_online } : l)))
+  }
+
   async function saveTags(id: string, tags: string[]) {
     await fetch(`/api/admin/listings/${id}`, {
       method: 'PATCH',
@@ -194,6 +203,16 @@ export default function AdminDashboard({ listings: initial }: { listings: Listin
                         Deactivate
                       </button>
                     )}
+                    <button
+                      onClick={() => toggleOnline(listing.id, !listing.sells_online)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                        listing.sells_online
+                          ? 'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'
+                          : 'border-blue-300 text-blue-600 hover:bg-blue-50'
+                      }`}
+                    >
+                      🛒 {listing.sells_online ? 'Online ✓' : 'Online?'}
+                    </button>
                     <button
                       onClick={() => setExpandedTags(expandedTags === listing.id ? null : listing.id)}
                       className="px-3 py-1.5 text-xs font-medium rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50"
