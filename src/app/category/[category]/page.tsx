@@ -28,14 +28,30 @@ export default async function CategoryPage({ params }: Props) {
   const label = slugToLabel(decodeURIComponent(category))
   const supabase = await createServerSupabaseClient()
 
-  const { data } = await supabase
-    .from('listings')
-    .select('*')
-    .eq('status', 'active')
-    .eq('category', label)
-    .order('business_name')
+  const isOnlineStores = label === 'Online Stores'
 
-  const listings = (data ?? []) as Listing[]
+  let listings: Listing[] = []
+
+  if (isOnlineStores) {
+    // Fetch both: businesses in the Online Stores category AND any with sells_online flag
+    const [{ data: byCat }, { data: byFlag }] = await Promise.all([
+      supabase.from('listings').select('*').eq('status', 'active').eq('category', label),
+      supabase.from('listings').select('*').eq('status', 'active').eq('sells_online', true),
+    ])
+    const seen = new Set<string>()
+    for (const item of [...(byCat ?? []), ...(byFlag ?? [])] as Listing[]) {
+      if (!seen.has(item.id)) { seen.add(item.id); listings.push(item) }
+    }
+    listings.sort((a, b) => a.business_name.localeCompare(b.business_name))
+  } else {
+    const { data } = await supabase
+      .from('listings')
+      .select('*')
+      .eq('status', 'active')
+      .eq('category', label)
+      .order('business_name')
+    listings = (data ?? []) as Listing[]
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
