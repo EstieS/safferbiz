@@ -38,7 +38,7 @@ export default async function HomePage() {
       </section>
 
       {/* Category pills */}
-      <section className="py-10 px-4 bg-white border-b border-gray-100">
+      <section className="py-10 px-4 bg-green-50 border-b border-green-100">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center gap-3 mb-5">
             <div className="h-px flex-1 max-w-16 bg-green-200" />
@@ -62,7 +62,7 @@ export default async function HomePage() {
       </section>
 
       {/* Country pills */}
-      <section className="py-8 px-4 bg-gray-50 border-b border-gray-100">
+      <section className="py-10 px-4 bg-blue-50 border-b border-blue-100">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center gap-3 mb-5">
             <div className="h-px flex-1 max-w-16 bg-blue-900" />
@@ -102,7 +102,7 @@ export default async function HomePage() {
       </section>
 
       {/* Popular products */}
-      <section className="py-8 px-4 bg-white border-b border-gray-100">
+      <section className="py-10 px-4 bg-red-50 border-b border-red-100">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center gap-3 mb-5">
             <div className="h-px flex-1 max-w-16 bg-red-600" />
