@@ -15,6 +15,9 @@ export default function Navbar() {
             <span className="text-2xl font-bold" style={{ color: '#007A4D' }}>
               Saffer<span style={{ color: '#FFB612' }}>Biz</span>
             </span>
+            <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300 leading-tight">
+              Beta
+            </span>
           </Link>
 
           <div className="hidden md:flex items-center gap-6">
