@@ -33,7 +33,7 @@ export default function AboutPage() {
         {/* Photo + intro */}
         <div className="flex flex-col sm:flex-row items-center gap-10 mb-16">
           <div className="flex-shrink-0">
-            <div className="w-48 h-48 rounded-full overflow-hidden ring-4 shadow-xl" style={{ ringColor: '#FFB612' }}>
+            <div className="w-48 h-48 rounded-full overflow-hidden ring-4 ring-yellow-400 shadow-xl">
               <Image
                 src="/Estie_photo.jpg"
                 alt="Estie, founder of SafferBiz"
