@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import { randomUUID } from 'crypto'
+import { sendSubscriptionConfirmation } from '@/lib/sendgrid'
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,6 +20,8 @@ export async function POST(req: NextRequest) {
       .eq('email', email.trim().toLowerCase())
       .maybeSingle()
 
+    const unsubscribe_token = existing?.unsubscribe_token ?? randomUUID()
+
     const { error } = await supabase.from('subscribers').upsert({
       name: name.trim(),
       email: email.trim().toLowerCase(),
@@ -26,10 +29,24 @@ export async function POST(req: NextRequest) {
       categories: Array.isArray(categories) ? categories : [],
       wants_events: wants_events === true,
       // Preserve existing token if re-subscribing, otherwise generate a new one
-      unsubscribe_token: existing?.unsubscribe_token ?? randomUUID(),
+      unsubscribe_token,
     }, { onConflict: 'email' })
 
     if (error) throw error
+
+    // Send confirmation email — best-effort
+    try {
+      await sendSubscriptionConfirmation({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        countries: Array.isArray(countries) ? countries : [],
+        categories: Array.isArray(categories) ? categories : [],
+        wants_events: wants_events === true,
+        unsubscribe_token,
+      })
+    } catch (emailErr) {
+      console.error('Failed to send subscription confirmation:', emailErr)
+    }
 
     return NextResponse.json({ success: true })
   } catch (err) {

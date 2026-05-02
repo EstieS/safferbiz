@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import { slugify } from '@/lib/slugify'
+import { sendNewSubmissionNotification } from '@/lib/sendgrid'
 
 async function geocodeCity(city: string, country: string): Promise<{ latitude: number; longitude: number } | null> {
   try {
@@ -63,6 +64,19 @@ export async function POST(req: NextRequest) {
     })
 
     if (error) throw error
+
+    // Notify admin — best-effort, don't fail the submission if this errors
+    try {
+      await sendNewSubmissionNotification({
+        business_name: business_name.trim(),
+        category,
+        city: cityTrimmed,
+        country,
+        email: email.trim(),
+      })
+    } catch (emailErr) {
+      console.error('Failed to send submission notification:', emailErr)
+    }
 
     return NextResponse.json({ success: true })
   } catch (err) {
