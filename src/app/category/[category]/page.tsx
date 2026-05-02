@@ -20,9 +20,14 @@ function slugToLabel(slug: string): string {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { category } = await params
   const label = slugToLabel(decodeURIComponent(category))
+  const title = `South African ${label} Businesses Worldwide`
+  const description = `Browse South African ${label} businesses and shops around the world. Find SA products and services in your country.`
+  const url = `https://safferbiz.com/category/${encodeURIComponent(label.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-'))}`
   return {
-    title: `South African ${label} Businesses Worldwide`,
-    description: `Browse South African ${label} businesses and shops around the world. Find SA products and services in your country.`,
+    title,
+    description,
+    openGraph: { title, description, url, type: 'website', siteName: 'SafferBiz' },
+    twitter: { card: 'summary', title, description },
   }
 }
 
