@@ -67,6 +67,12 @@ export default function Navbar() {
               📍 Near Me
             </Link>
             <Link
+              href="/subscribe"
+              className="text-sm font-medium text-gray-700 hover:text-green-700"
+            >
+              🔔 Alerts
+            </Link>
+            <Link
               href="/submit"
               className="text-sm font-medium text-white px-4 py-2 rounded-lg transition-colors"
               style={{ backgroundColor: '#007A4D' }}
@@ -115,6 +121,9 @@ export default function Navbar() {
           ))}
           <Link href="/events" className="block py-1 text-sm font-medium text-gray-700" onClick={() => setMenuOpen(false)}>
             🎉 Events
+          </Link>
+          <Link href="/subscribe" className="block py-1 text-sm font-medium text-gray-700" onClick={() => setMenuOpen(false)}>
+            🔔 Get Alerts
           </Link>
           <Link
             href="/near-me"
