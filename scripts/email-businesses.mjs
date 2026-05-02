@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
+import readline from 'readline'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 config({ path: join(__dirname, '../.env.local') })
@@ -17,41 +18,9 @@ const supabase = createClient(
 const SITE = 'https://safferbiz.com'
 const FROM = process.env.SENDGRID_FROM_EMAIL
 
-// Fetch all active listings with emails
-const { data, error } = await supabase
-  .from('listings')
-  .select('business_name, slug, email, city, country')
-  .eq('status', 'active')
-  .not('email', 'is', null)
-  .order('business_name')
-
-if (error) {
-  console.error('Failed to fetch listings:', error.message)
-  process.exit(1)
-}
-
-// Deduplicate by email — keep first listing per email
-const all = [...new Map(data.map(l => [l.email.toLowerCase(), l])).values()]
-
-// Filter out malformed emails (e.g. someone put a URL in the email field)
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const unique = all.filter(l => {
-  if (!emailRegex.test(l.email)) {
-    console.warn(`⚠ Skipping ${l.business_name} — invalid email: ${l.email}`)
-    return false
-  }
-  return true
-})
-
-console.log(`Sending to ${unique.length} businesses...\n`)
-
-let sent = 0
-let failed = 0
-
-for (const listing of unique) {
+function buildHtml(listing) {
   const listingUrl = `${SITE}/listings/${listing.slug}`
-
-  const html = `
+  return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background: #007A4D; padding: 24px; text-align: center;">
         <h1 style="color: white; margin: 0; font-size: 24px;">Saffer<span style="color: #FFB612;">Biz</span></h1>
@@ -84,14 +53,73 @@ for (const listing of unique) {
       </div>
     </div>
   `
+}
 
+// ── Step 1: Send preview to Estie ──────────────────────────────────────────
+const previewListing = {
+  business_name: 'Biltong & Co. (Example)',
+  slug: 'biltong-usa', // real listing so the button link works
+}
+
+console.log('Sending preview to estiesa@gmail.com...')
+await sgMail.send({
+  to: 'estiesa@gmail.com',
+  from: { email: FROM, name: 'SafferBiz' },
+  replyTo: FROM,
+  subject: '[PREVIEW] Your SafferBiz listing — please check your details 🇿🇦',
+  html: buildHtml(previewListing),
+})
+console.log('✓ Preview sent! Check your inbox.\n')
+
+// ── Step 2: Ask before sending to everyone ─────────────────────────────────
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+const answer = await new Promise(resolve => rl.question('Happy with the preview? Type YES to send to all businesses: ', resolve))
+rl.close()
+
+if (answer.trim().toUpperCase() !== 'YES') {
+  console.log('Aborted. No emails sent to businesses.')
+  process.exit(0)
+}
+
+// ── Step 3: Fetch and send to all businesses ───────────────────────────────
+const { data, error } = await supabase
+  .from('listings')
+  .select('business_name, slug, email, city, country')
+  .eq('status', 'active')
+  .not('email', 'is', null)
+  .order('business_name')
+
+if (error) {
+  console.error('Failed to fetch listings:', error.message)
+  process.exit(1)
+}
+
+// Deduplicate by email — keep first listing per email
+const all = [...new Map(data.map(l => [l.email.toLowerCase(), l])).values()]
+
+// Filter out malformed emails (e.g. someone put a URL in the email field)
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const unique = all.filter(l => {
+  if (!emailRegex.test(l.email)) {
+    console.warn(`⚠ Skipping ${l.business_name} — invalid email: ${l.email}`)
+    return false
+  }
+  return true
+})
+
+console.log(`\nSending to ${unique.length} businesses...\n`)
+
+let sent = 0
+let failed = 0
+
+for (const listing of unique) {
   try {
     await sgMail.send({
       to: listing.email,
       from: { email: FROM, name: 'SafferBiz' },
       replyTo: FROM,
       subject: 'Your SafferBiz listing — please check your details 🇿🇦',
-      html,
+      html: buildHtml(listing),
     })
     console.log(`✓ ${listing.business_name} <${listing.email}>`)
     sent++
