@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-server'
 import { slugify } from '@/lib/slugify'
 
+async function geocodeCity(city: string, country: string): Promise<{ latitude: number; longitude: number } | null> {
+  try {
+    const q = encodeURIComponent(`${city}, ${country}`)
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`, {
+      headers: { 'User-Agent': 'SafferBiz/1.0 (safferbiz.vercel.app)' },
+    })
+    const data = await res.json()
+    if (!data.length) return null
+    return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) }
+  } catch {
+    return null
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -23,19 +37,28 @@ export async function POST(req: NextRequest) {
       slug = `${baseSlug}-${suffix++}`
     }
 
+    // Auto-geocode if city is provided (best-effort, won't block submission if it fails)
+    const cityTrimmed = city?.trim() || null
+    let coords: { latitude: number; longitude: number } | null = null
+    if (cityTrimmed) {
+      coords = await geocodeCity(cityTrimmed, country)
+    }
+
     const { error } = await supabase.from('listings').insert({
       business_name: business_name.trim(),
       slug,
       description: description.trim(),
       category,
       country,
-      city: city?.trim() || null,
+      city: cityTrimmed,
       website_url: website_url?.trim() || null,
       facebook_url: facebook_url?.trim() || null,
       instagram_url: instagram_url?.trim() || null,
       email: email.trim(),
       tags: Array.isArray(tags) ? tags : [],
       sells_online: sells_online === true,
+      latitude: coords?.latitude ?? null,
+      longitude: coords?.longitude ?? null,
       status: 'pending',
     })
 
