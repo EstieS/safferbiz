@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import EventCard from '@/components/EventCard'
-import { EVENT_CATEGORIES, COUNTRIES } from '@/lib/constants'
+import EventFilters from './EventFilters'
 import type { Event } from '@/lib/types'
 
 export const metadata: Metadata = {
@@ -11,11 +12,11 @@ export const metadata: Metadata = {
 }
 
 interface Props {
-  searchParams: Promise<{ country?: string; category?: string; when?: string }>
+  searchParams: Promise<{ country?: string; category?: string; when?: string; city?: string }>
 }
 
 export default async function EventsPage({ searchParams }: Props) {
-  const { country, category, when } = await searchParams
+  const { country, category, when, city } = await searchParams
   const supabase = await createServerSupabaseClient()
   const today = new Date().toISOString().split('T')[0]
 
@@ -27,6 +28,7 @@ export default async function EventsPage({ searchParams }: Props) {
 
   if (country) query = query.eq('country', country)
   if (category) query = query.eq('category', category)
+  if (city) query = query.ilike('city', `%${city}%`)
   if (when === 'past') {
     query = query.lt('event_date', today)
   } else {
@@ -52,72 +54,19 @@ export default async function EventsPage({ searchParams }: Props) {
         </Link>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-8">
-        {/* When */}
-        <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
-          <Link
-            href={{ pathname: '/events', query: { ...(country && { country }), ...(category && { category }) } }}
-            className={`px-4 py-2 font-medium transition-colors ${!when || when === 'upcoming' ? 'bg-green-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-          >
-            Upcoming
-          </Link>
-          <Link
-            href={{ pathname: '/events', query: { ...(country && { country }), ...(category && { category }), when: 'past' } }}
-            className={`px-4 py-2 font-medium transition-colors ${when === 'past' ? 'bg-green-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-          >
-            Past
-          </Link>
-        </div>
-
-        {/* Category */}
-        <select
-          defaultValue={category ?? ''}
-          className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white"
-          onChange={(e) => {
-            const params = new URLSearchParams()
-            if (e.target.value) params.set('category', e.target.value)
-            if (country) params.set('country', country)
-            if (when) params.set('when', when)
-            window.location.href = `/events?${params.toString()}`
-          }}
-        >
-          <option value="">All categories</option>
-          {EVENT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-
-        {/* Country */}
-        <select
-          defaultValue={country ?? ''}
-          className="px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white"
-          onChange={(e) => {
-            const params = new URLSearchParams()
-            if (e.target.value) params.set('country', e.target.value)
-            if (category) params.set('category', category)
-            if (when) params.set('when', when)
-            window.location.href = `/events?${params.toString()}`
-          }}
-        >
-          <option value="">All countries</option>
-          {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-
-        {(country || category || when) && (
-          <Link href="/events" className="px-3 py-2 text-sm text-gray-500 hover:text-red-600">
-            Clear filters ✕
-          </Link>
-        )}
-      </div>
-
-      <p className="text-sm text-gray-500 mb-6">
-        {events.length} {events.length === 1 ? 'event' : 'events'} found
-      </p>
+      <Suspense>
+        <EventFilters />
+      </Suspense>
 
       {events.length === 0 ? (
-        <div className="text-center py-16">
+        <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
           <p className="text-5xl mb-4">📅</p>
-          <p className="text-gray-400 text-lg mb-2">No events found</p>
-          <p className="text-gray-400 text-sm mb-6">Know of an SA event? Add it!</p>
+          <p className="text-xl font-semibold text-gray-700 mb-2">No events found</p>
+          <p className="text-gray-400 text-sm mb-6">
+            {when === 'past'
+              ? 'No past events match your filters.'
+              : 'No upcoming events yet — be the first to add one!'}
+          </p>
           <Link
             href="/events/submit"
             className="inline-block px-6 py-3 rounded-xl text-white font-semibold text-sm"
@@ -127,11 +76,16 @@ export default async function EventsPage({ searchParams }: Props) {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {events.map((event) => (
-            <EventCard key={event.id} event={event} />
-          ))}
-        </div>
+        <>
+          <p className="text-sm text-gray-500 mb-6">
+            {events.length} {events.length === 1 ? 'event' : 'events'} found
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {events.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
