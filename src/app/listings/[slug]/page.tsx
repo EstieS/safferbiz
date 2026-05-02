@@ -24,11 +24,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const location = [data.city, data.country].filter(Boolean).join(', ')
   const tags = (data.tags ?? []) as string[]
   const tagStr = tags.length ? ` — ${tags.slice(0, 3).join(', ')}` : ''
+  const title = `${data.business_name} — South African ${data.category} in ${location}`
+  const description =
+    data.description?.slice(0, 155) ??
+    `${data.business_name} is a South African ${data.category} business in ${location}${tagStr}. Found on SafferBiz.`
+  const url = `https://safferbiz.com/listings/${slug}`
+
   return {
-    title: `${data.business_name} — South African ${data.category} in ${location}`,
-    description:
-      data.description?.slice(0, 155) ??
-      `${data.business_name} is a South African ${data.category} business in ${location}${tagStr}. Found on SafferBiz.`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url,
+      type: 'website',
+      siteName: 'SafferBiz',
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+    },
   }
 }
 

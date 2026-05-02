@@ -11,11 +11,36 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const supabase = await createServerSupabaseClient()
-  const { data } = await supabase.from('events').select('title, description').eq('slug', slug).single()
+  const { data } = await supabase
+    .from('events')
+    .select('title, description, event_date, city, country, category')
+    .eq('slug', slug)
+    .single()
   if (!data) return { title: 'Event not found' }
+
+  const date = new Date(data.event_date + 'T00:00:00').toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+  const location = [data.city, data.country].filter(Boolean).join(', ')
+  const description = data.description
+    ?? `${data.category} event on ${date}${location ? ` in ${location}` : ''}. Listed on SafferBiz.`
+  const url = `https://safferbiz.com/events/${slug}`
+
   return {
-    title: `${data.title} | SafferBiz Events`,
-    description: data.description ?? undefined,
+    title: data.title,
+    description,
+    openGraph: {
+      title: data.title,
+      description,
+      url,
+      type: 'article',
+      siteName: 'SafferBiz',
+    },
+    twitter: {
+      card: 'summary',
+      title: data.title,
+      description,
+    },
   }
 }
 
