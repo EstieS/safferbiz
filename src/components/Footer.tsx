@@ -1,7 +1,34 @@
 import Link from 'next/link'
-import { CATEGORIES, COUNTRIES } from '@/lib/constants'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
-export default function Footer() {
+export default async function Footer() {
+  const supabase = await createServerSupabaseClient()
+
+  // Fetch active listings to count by category and country
+  const { data: listings } = await supabase
+    .from('listings')
+    .select('category, country')
+    .eq('status', 'active')
+
+  // Count and sort categories
+  const categoryCounts: Record<string, number> = {}
+  const countryCounts: Record<string, number> = {}
+
+  for (const l of listings ?? []) {
+    if (l.category) categoryCounts[l.category] = (categoryCounts[l.category] ?? 0) + 1
+    if (l.country) countryCounts[l.country] = (countryCounts[l.country] ?? 0) + 1
+  }
+
+  const topCategories = Object.entries(categoryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([cat]) => cat)
+
+  const topCountries = Object.entries(countryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([country]) => country)
+
   return (
     <footer className="bg-gray-900 text-gray-300 mt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -20,7 +47,7 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">Categories</h3>
             <ul className="space-y-2">
-              {CATEGORIES.slice(0, 6).map((cat) => (
+              {topCategories.map((cat) => (
                 <li key={cat}>
                   <Link
                     href={`/category/${encodeURIComponent(cat.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-'))}`}
@@ -36,7 +63,7 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">Countries</h3>
             <ul className="space-y-2">
-              {COUNTRIES.slice(0, 6).map((country) => (
+              {topCountries.map((country) => (
                 <li key={country}>
                   <Link
                     href={`/country/${encodeURIComponent(country.toLowerCase().replace(/ /g, '-'))}`}
@@ -53,8 +80,9 @@ export default function Footer() {
             <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">Quick Links</h3>
             <ul className="space-y-2">
               <li><Link href="/submit" className="text-sm hover:text-white transition-colors">List Your Business</Link></li>
+              <li><Link href="/subscribe" className="text-sm hover:text-white transition-colors">Get Alerts</Link></li>
+              <li><Link href="/events" className="text-sm hover:text-white transition-colors">Events</Link></li>
               <li><Link href="/about" className="text-sm hover:text-white transition-colors">About</Link></li>
-              <li><Link href="/contact" className="text-sm hover:text-white transition-colors">Contact</Link></li>
             </ul>
           </div>
         </div>
