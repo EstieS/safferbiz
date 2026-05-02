@@ -19,6 +19,10 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'SafferBiz',
   },
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
