@@ -72,6 +72,70 @@ function TagEditor({ listing, onSave }: { listing: Listing; onSave: (tags: strin
   )
 }
 
+function EventEditor({ event, onSave }: { event: Event; onSave: (data: Partial<Event>) => void }) {
+  const [fields, setFields] = useState({
+    title: event.title ?? '',
+    description: event.description ?? '',
+    venue: event.venue ?? '',
+    city: event.city ?? '',
+    url: event.url ?? '',
+    facebook_url: event.facebook_url ?? '',
+    instagram_url: event.instagram_url ?? '',
+  })
+
+  function set(key: string, value: string) {
+    setFields(prev => ({ ...prev, [key]: value }))
+  }
+
+  return (
+    <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
+      <p className="text-xs font-medium text-gray-500 mb-2">Edit Event Details</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs text-gray-400">Title</label>
+          <input value={fields.title} onChange={e => set('title', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">City</label>
+          <input value={fields.city} onChange={e => set('city', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">Venue</label>
+          <input value={fields.venue} onChange={e => set('venue', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">Event / Tickets URL</label>
+          <input value={fields.url} onChange={e => set('url', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" placeholder="https://..." />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">Facebook URL</label>
+          <input value={fields.facebook_url} onChange={e => set('facebook_url', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" placeholder="https://facebook.com/..." />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">Instagram URL</label>
+          <input value={fields.instagram_url} onChange={e => set('instagram_url', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" placeholder="https://instagram.com/..." />
+        </div>
+      </div>
+      <div>
+        <label className="text-xs text-gray-400">Description</label>
+        <textarea value={fields.description} onChange={e => set('description', e.target.value)}
+          rows={2} className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5 resize-none" />
+      </div>
+      <button onClick={() => onSave(fields)}
+        className="px-3 py-1 text-xs font-medium rounded text-white"
+        style={{ backgroundColor: '#007A4D' }}>
+        Save Changes
+      </button>
+    </div>
+  )
+}
+
 const EVENT_STATUS_COLORS: Record<EventStatus, string> = {
   active: 'bg-green-100 text-green-700',
   pending: 'bg-yellow-100 text-yellow-700',
@@ -82,6 +146,7 @@ function EventsPanel({ events: initialEvents }: { events: Event[] }) {
   const [events, setEvents] = useState(initialEvents)
   const [filter, setFilter] = useState<EventStatus | 'all'>('pending')
   const [busy, setBusy] = useState<string | null>(null)
+  const [expandedEdit, setExpandedEdit] = useState<string | null>(null)
 
   const filtered = filter === 'all' ? events : events.filter((e) => e.status === filter)
   const counts = {
@@ -100,6 +165,16 @@ function EventsPanel({ events: initialEvents }: { events: Event[] }) {
     })
     setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)))
     setBusy(null)
+  }
+
+  async function saveEvent(id: string, data: Partial<Event>) {
+    await fetch(`/api/admin/events/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, ...data } : e)))
+    setExpandedEdit(null)
   }
 
   async function deleteEvent(id: string) {
@@ -130,6 +205,7 @@ function EventsPanel({ events: initialEvents }: { events: Event[] }) {
             {filtered.map((event) => (
               <div key={event.id} className="p-5">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${EVENT_STATUS_COLORS[event.status]}`}>{event.status}</span>
@@ -143,6 +219,7 @@ function EventsPanel({ events: initialEvents }: { events: Event[] }) {
                     </p>
                     {event.description && <p className="text-xs text-gray-400 mt-1 line-clamp-1">{event.description}</p>}
                   </div>
+
                   <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                     {event.status !== 'active' && (
                       <button onClick={() => updateStatus(event.id, 'active')} disabled={busy === event.id}
@@ -153,6 +230,10 @@ function EventsPanel({ events: initialEvents }: { events: Event[] }) {
                       <button onClick={() => updateStatus(event.id, 'inactive')} disabled={busy === event.id}
                         className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50">Deactivate</button>
                     )}
+                    <button onClick={() => setExpandedEdit(expandedEdit === event.id ? null : event.id)}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
+                      Edit
+                    </button>
                     {event.url && (
                       <a href={event.url} target="_blank" rel="noopener noreferrer"
                         className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">Link</a>
@@ -161,6 +242,9 @@ function EventsPanel({ events: initialEvents }: { events: Event[] }) {
                       className="px-3 py-1.5 text-xs font-medium rounded-lg text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50">Delete</button>
                   </div>
                 </div>
+                {expandedEdit === event.id && (
+                  <EventEditor event={event} onSave={(data) => saveEvent(event.id, data)} />
+                )}
               </div>
             ))}
           </div>
