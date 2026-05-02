@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useState } from 'react'
 import { CATEGORIES, COUNTRIES } from '@/lib/constants'
 
@@ -12,6 +13,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center gap-2">
+            <Image src="/logo.png" alt="SafferBiz" width={36} height={36} className="rounded-md" />
             <span className="text-2xl font-bold" style={{ color: '#007A4D' }}>
               Saffer<span style={{ color: '#FFB612' }}>Biz</span>
             </span>

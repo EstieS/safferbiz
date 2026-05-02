@@ -65,18 +65,18 @@ export default async function HomePage() {
       <section className="py-8 px-4 bg-gray-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center gap-3 mb-5">
-            <div className="h-px flex-1 max-w-16 bg-amber-200" />
-            <h2 className="text-sm font-bold text-amber-700 uppercase tracking-widest">
+            <div className="h-px flex-1 max-w-16 bg-blue-900" />
+            <h2 className="text-sm font-bold uppercase tracking-widest text-blue-900">
               Browse by Country
             </h2>
-            <div className="h-px flex-1 max-w-16 bg-amber-200" />
+            <div className="h-px flex-1 max-w-16 bg-blue-900" />
           </div>
           <div className="flex flex-wrap gap-2 justify-center">
             {COUNTRIES.map((country) => (
               <Link
                 key={country}
                 href={`/country/${encodeURIComponent(country.toLowerCase().replace(/ /g, '-'))}`}
-                className="px-4 py-2 rounded-full text-sm font-medium border border-gray-200 text-gray-700 hover:border-amber-400 hover:text-amber-700 hover:bg-amber-50 transition-all bg-white"
+                className="px-4 py-2 rounded-full text-sm font-medium border border-gray-200 text-gray-700 hover:border-blue-900 hover:text-white hover:bg-blue-900 transition-all bg-white"
               >
                 {country}
               </Link>
@@ -105,18 +105,18 @@ export default async function HomePage() {
       <section className="py-8 px-4 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center gap-3 mb-5">
-            <div className="h-px flex-1 max-w-16 bg-amber-200" />
-            <h2 className="text-sm font-bold text-amber-700 uppercase tracking-widest">
+            <div className="h-px flex-1 max-w-16 bg-red-600" />
+            <h2 className="text-sm font-bold text-red-600 uppercase tracking-widest">
               Search by Product
             </h2>
-            <div className="h-px flex-1 max-w-16 bg-amber-200" />
+            <div className="h-px flex-1 max-w-16 bg-red-600" />
           </div>
           <div className="flex flex-wrap gap-2 justify-center">
             {PRODUCT_TAGS.slice(0, 12).map((tag) => (
               <Link
                 key={tag}
                 href={`/tag/${encodeURIComponent(tag)}`}
-                className="px-4 py-2 rounded-full text-sm font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all"
+                className="px-4 py-2 rounded-full text-sm font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all"
               >
                 {tag}
               </Link>
