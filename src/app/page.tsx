@@ -40,15 +40,19 @@ export default async function HomePage() {
       {/* Category pills */}
       <section className="py-10 px-4 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 text-center">
-            Browse by Category
-          </h2>
+          <div className="flex items-center justify-center gap-3 mb-5">
+            <div className="h-px flex-1 max-w-16 bg-green-200" />
+            <h2 className="text-sm font-bold text-green-800 uppercase tracking-widest">
+              Browse by Category
+            </h2>
+            <div className="h-px flex-1 max-w-16 bg-green-200" />
+          </div>
           <div className="flex flex-wrap gap-2 justify-center">
             {CATEGORIES.map((cat) => (
               <Link
                 key={cat}
                 href={`/category/${encodeURIComponent(cat.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-'))}`}
-                className="px-4 py-2 rounded-full text-sm font-medium border border-gray-200 hover:border-green-500 hover:text-green-700 transition-colors bg-white"
+                className="px-4 py-2 rounded-full text-sm font-medium border border-gray-200 text-gray-700 hover:border-green-500 hover:text-green-700 hover:bg-green-50 transition-all bg-white"
               >
                 {cat}
               </Link>
@@ -60,15 +64,19 @@ export default async function HomePage() {
       {/* Country pills */}
       <section className="py-8 px-4 bg-gray-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 text-center">
-            Browse by Country
-          </h2>
+          <div className="flex items-center justify-center gap-3 mb-5">
+            <div className="h-px flex-1 max-w-16 bg-amber-200" />
+            <h2 className="text-sm font-bold text-amber-700 uppercase tracking-widest">
+              Browse by Country
+            </h2>
+            <div className="h-px flex-1 max-w-16 bg-amber-200" />
+          </div>
           <div className="flex flex-wrap gap-2 justify-center">
             {COUNTRIES.map((country) => (
               <Link
                 key={country}
                 href={`/country/${encodeURIComponent(country.toLowerCase().replace(/ /g, '-'))}`}
-                className="px-4 py-2 rounded-full text-sm font-medium border border-gray-200 hover:border-green-500 hover:text-green-700 transition-colors bg-white"
+                className="px-4 py-2 rounded-full text-sm font-medium border border-gray-200 text-gray-700 hover:border-amber-400 hover:text-amber-700 hover:bg-amber-50 transition-all bg-white"
               >
                 {country}
               </Link>
@@ -80,15 +88,19 @@ export default async function HomePage() {
       {/* Popular products */}
       <section className="py-8 px-4 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 text-center">
-            Search by Product
-          </h2>
+          <div className="flex items-center justify-center gap-3 mb-5">
+            <div className="h-px flex-1 max-w-16 bg-amber-200" />
+            <h2 className="text-sm font-bold text-amber-700 uppercase tracking-widest">
+              Search by Product
+            </h2>
+            <div className="h-px flex-1 max-w-16 bg-amber-200" />
+          </div>
           <div className="flex flex-wrap gap-2 justify-center">
             {PRODUCT_TAGS.slice(0, 12).map((tag) => (
               <Link
                 key={tag}
                 href={`/tag/${encodeURIComponent(tag)}`}
-                className="px-4 py-2 rounded-full text-sm font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+                className="px-4 py-2 rounded-full text-sm font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all"
               >
                 {tag}
               </Link>

@@ -21,12 +21,12 @@ export default function SearchBar() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search for a business, product, or service..."
-        className="flex-1 px-5 py-3 rounded-l-xl border border-gray-300 focus:outline-none focus:border-green-500 text-gray-800 text-sm"
+        className="flex-1 px-5 py-3 rounded-l-xl border border-white/40 focus:outline-none focus:border-white bg-white/15 text-white placeholder:text-white/70 text-sm backdrop-blur-sm"
       />
       <button
         type="submit"
-        className="px-6 py-3 rounded-r-xl text-white font-medium text-sm transition-colors"
-        style={{ backgroundColor: '#007A4D' }}
+        className="px-6 py-3 rounded-r-xl font-medium text-sm transition-colors bg-white hover:bg-gray-100"
+        style={{ color: '#007A4D' }}
       >
         Search
       </button>

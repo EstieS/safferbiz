@@ -11,7 +11,8 @@ export default function ListingCard({ listing }: Props) {
 
   return (
     <Link href={`/listings/${listing.slug}`} className="block group">
-      <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-green-300 transition-all h-full flex flex-col">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-lg hover:border-green-400 transition-all h-full flex flex-col relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 rounded-t-xl" style={{ backgroundColor: '#007A4D' }} />
         <div className="flex items-start gap-3 mb-3">
           {listing.logo_url ? (
             <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
