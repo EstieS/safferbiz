@@ -2,13 +2,16 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 
-type State = 'idle' | 'loading' | 'sent' | 'error'
+type State = 'idle' | 'loading' | 'error'
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [state, setState] = useState<State>('idle')
   const [errorMsg, setErrorMsg] = useState('')
+  const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -16,16 +19,13 @@ export default function AdminLoginPage() {
     setErrorMsg('')
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    })
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      setErrorMsg(error.message)
+      setErrorMsg('Invalid email or password.')
       setState('error')
     } else {
-      setState('sent')
+      router.push('/admin')
     }
   }
 
@@ -33,18 +33,11 @@ export default function AdminLoginPage() {
     <div className="min-h-[60vh] flex items-center justify-center px-4">
       <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Login</h1>
-        <p className="text-sm text-gray-500 mb-6">
-          Enter your email to receive a magic link.
-        </p>
+        <p className="text-sm text-gray-500 mb-6">Sign in to manage SafferBiz.</p>
 
-        {state === 'sent' ? (
-          <div className="text-center py-4">
-            <div className="text-4xl mb-3">📬</div>
-            <p className="text-gray-700 font-medium">Check your email</p>
-            <p className="text-sm text-gray-500 mt-1">We sent a login link to {email}</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
             <input
               type="email"
               required
@@ -53,19 +46,32 @@ export default function AdminLoginPage() {
               placeholder="your@email.com"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-green-500"
             />
-            {state === 'error' && (
-              <p className="text-sm text-red-600">{errorMsg || 'Something went wrong. Please try again.'}</p>
-            )}
-            <button
-              type="submit"
-              disabled={state === 'loading'}
-              className="w-full py-2.5 rounded-lg text-white font-medium text-sm disabled:opacity-60"
-              style={{ backgroundColor: '#007A4D' }}
-            >
-              {state === 'loading' ? 'Sending...' : 'Send Magic Link'}
-            </button>
-          </form>
-        )}
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Password</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-green-500"
+            />
+          </div>
+
+          {state === 'error' && (
+            <p className="text-sm text-red-600">{errorMsg}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={state === 'loading'}
+            className="w-full py-2.5 rounded-lg text-white font-medium text-sm disabled:opacity-60"
+            style={{ backgroundColor: '#007A4D' }}
+          >
+            {state === 'loading' ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
       </div>
     </div>
   )
