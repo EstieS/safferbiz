@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Listing, ListingStatus } from '@/lib/types'
+import type { Listing, ListingStatus, Event, EventStatus } from '@/lib/types'
 import { PRODUCT_TAGS } from '@/lib/constants'
 
 const STATUS_COLORS: Record<ListingStatus, string> = {
@@ -72,7 +72,106 @@ function TagEditor({ listing, onSave }: { listing: Listing; onSave: (tags: strin
   )
 }
 
-export default function AdminDashboard({ listings: initial }: { listings: Listing[] }) {
+const EVENT_STATUS_COLORS: Record<EventStatus, string> = {
+  active: 'bg-green-100 text-green-700',
+  pending: 'bg-yellow-100 text-yellow-700',
+  inactive: 'bg-gray-100 text-gray-500',
+}
+
+function EventsPanel({ events: initialEvents }: { events: Event[] }) {
+  const [events, setEvents] = useState(initialEvents)
+  const [filter, setFilter] = useState<EventStatus | 'all'>('pending')
+  const [busy, setBusy] = useState<string | null>(null)
+
+  const filtered = filter === 'all' ? events : events.filter((e) => e.status === filter)
+  const counts = {
+    all: events.length,
+    pending: events.filter((e) => e.status === 'pending').length,
+    active: events.filter((e) => e.status === 'active').length,
+    inactive: events.filter((e) => e.status === 'inactive').length,
+  }
+
+  async function updateStatus(id: string, status: EventStatus) {
+    setBusy(id)
+    await fetch(`/api/admin/events/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+    setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)))
+    setBusy(null)
+  }
+
+  async function deleteEvent(id: string) {
+    if (!confirm('Delete this event permanently?')) return
+    setBusy(id)
+    await fetch(`/api/admin/events/${id}`, { method: 'DELETE' })
+    setEvents((prev) => prev.filter((e) => e.id !== id))
+    setBusy(null)
+  }
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        {(['all', 'pending', 'active', 'inactive'] as const).map((s) => (
+          <button key={s} onClick={() => setFilter(s)}
+            className={`p-4 rounded-xl border text-left transition-all ${filter === s ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+            <p className="text-2xl font-bold text-gray-900">{counts[s]}</p>
+            <p className="text-sm text-gray-500 capitalize">{s}</p>
+          </button>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        {filtered.length === 0 ? (
+          <p className="text-center text-gray-400 py-12">No events in this view.</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {filtered.map((event) => (
+              <div key={event.id} className="p-5">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${EVENT_STATUS_COLORS[event.status]}`}>{event.status}</span>
+                      <span className="text-xs text-gray-400">{event.category}</span>
+                      <span className="text-xs font-semibold text-red-600">{new Date(event.event_date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                    <p className="font-semibold text-gray-900 truncate">{event.title}</p>
+                    <p className="text-sm text-gray-500">
+                      {[event.venue, event.city, event.country].filter(Boolean).join(', ')}
+                      {event.organizer_name ? ` · ${event.organizer_name}` : ''}
+                    </p>
+                    {event.description && <p className="text-xs text-gray-400 mt-1 line-clamp-1">{event.description}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                    {event.status !== 'active' && (
+                      <button onClick={() => updateStatus(event.id, 'active')} disabled={busy === event.id}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg text-white disabled:opacity-50"
+                        style={{ backgroundColor: '#007A4D' }}>Approve</button>
+                    )}
+                    {event.status !== 'inactive' && (
+                      <button onClick={() => updateStatus(event.id, 'inactive')} disabled={busy === event.id}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50">Deactivate</button>
+                    )}
+                    {event.url && (
+                      <a href={event.url} target="_blank" rel="noopener noreferrer"
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">Link</a>
+                    )}
+                    <button onClick={() => deleteEvent(event.id)} disabled={busy === event.id}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50">Delete</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function AdminDashboard({ listings: initial, events: initialEvents }: { listings: Listing[], events: Event[] }) {
+  const [tab, setTab] = useState<'listings' | 'events'>('listings')
   const [listings, setListings] = useState(initial)
   const [filter, setFilter] = useState<ListingStatus | 'all'>('pending')
   const [busy, setBusy] = useState<string | null>(null)
@@ -133,6 +232,22 @@ export default function AdminDashboard({ listings: initial }: { listings: Listin
           <button className="text-sm text-gray-500 hover:text-red-600">Sign out</button>
         </form>
       </div>
+
+      {/* Tab switcher */}
+      <div className="flex gap-2 mb-8">
+        <button onClick={() => setTab('listings')}
+          className={`px-5 py-2 rounded-lg font-medium text-sm transition-all ${tab === 'listings' ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          style={tab === 'listings' ? { backgroundColor: '#007A4D' } : {}}>
+          🏪 Listings
+        </button>
+        <button onClick={() => setTab('events')}
+          className={`px-5 py-2 rounded-lg font-medium text-sm transition-all ${tab === 'events' ? 'text-white bg-red-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          🎉 Events
+        </button>
+      </div>
+
+      {tab === 'events' && <EventsPanel events={initialEvents} />}
+      {tab === 'listings' && <div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {(['all', 'pending', 'active', 'inactive'] as const).map((s) => (
@@ -247,6 +362,7 @@ export default function AdminDashboard({ listings: initial }: { listings: Listin
           </div>
         )}
       </div>
+      </div>}
     </div>
   )
 }

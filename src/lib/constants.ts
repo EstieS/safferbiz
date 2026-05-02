@@ -79,6 +79,20 @@ export type Category = (typeof CATEGORIES)[number]
 export type Country = (typeof COUNTRIES)[number]
 export type ProductTag = (typeof PRODUCT_TAGS)[number]
 
+export const EVENT_CATEGORIES = [
+  'Community & Networking',
+  'Food & Braai',
+  'Music & Entertainment',
+  'Sports & Outdoors',
+  'Cultural & Heritage',
+  'Markets & Shopping',
+  'Family & Kids',
+  'Business & Professional',
+  'Other',
+] as const
+
+export type EventCategory = (typeof EVENT_CATEGORIES)[number]
+
 export const SA_COLORS = {
   green: '#007A4D',
   gold: '#FFB612',

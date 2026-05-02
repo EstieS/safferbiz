@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server'
 import AdminDashboard from './AdminDashboard'
-import type { Listing } from '@/lib/types'
+import type { Listing, Event } from '@/lib/types'
 
 export const metadata = { title: 'Admin — SafferBiz' }
 
@@ -12,12 +12,13 @@ export default async function AdminPage() {
   if (!user) redirect('/admin/login')
 
   const admin = createAdminClient()
-  const { data } = await admin
-    .from('listings')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const [{ data: listingsData }, { data: eventsData }] = await Promise.all([
+    admin.from('listings').select('*').order('created_at', { ascending: false }),
+    admin.from('events').select('*').order('event_date', { ascending: true }),
+  ])
 
-  const listings = (data ?? []) as Listing[]
+  const listings = (listingsData ?? []) as Listing[]
+  const events = (eventsData ?? []) as Event[]
 
-  return <AdminDashboard listings={listings} />
+  return <AdminDashboard listings={listings} events={events} />
 }

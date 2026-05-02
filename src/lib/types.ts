@@ -22,6 +22,30 @@ export interface Listing {
   updated_at: string
 }
 
+export type EventStatus = 'active' | 'pending' | 'inactive'
+
+export interface Event {
+  id: string
+  title: string
+  slug: string
+  description: string | null
+  event_date: string
+  event_end_date: string | null
+  event_time: string | null
+  venue: string | null
+  city: string | null
+  country: string
+  url: string | null
+  organizer_name: string | null
+  organizer_email: string | null
+  organizer_phone: string | null
+  category: string
+  listing_id: string | null
+  status: EventStatus
+  created_at: string
+  updated_at: string
+}
+
 export interface ListingFormData {
   business_name: string
   description: string

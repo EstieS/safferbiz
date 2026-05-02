@@ -57,6 +57,9 @@ export default function Navbar() {
               </div>
             </div>
 
+            <Link href="/events" className="text-sm font-medium text-gray-700 hover:text-red-600">
+              🎉 Events
+            </Link>
             <Link
               href="/near-me"
               className="text-sm font-medium text-gray-700 hover:text-green-700 flex items-center gap-1"
@@ -110,6 +113,9 @@ export default function Navbar() {
               {country}
             </Link>
           ))}
+          <Link href="/events" className="block py-1 text-sm font-medium text-gray-700" onClick={() => setMenuOpen(false)}>
+            🎉 Events
+          </Link>
           <Link
             href="/near-me"
             className="block py-1 text-sm font-medium text-gray-700"
