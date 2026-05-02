@@ -165,6 +165,27 @@ export default function EventSubmitForm() {
         />
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Facebook Page / Event</label>
+          <input
+            name="facebook_url"
+            type="url"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-red-400"
+            placeholder="https://facebook.com/..."
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Instagram</label>
+          <input
+            name="instagram_url"
+            type="url"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-red-400"
+            placeholder="https://instagram.com/..."
+          />
+        </div>
+      </div>
+
       <div className="border-t border-gray-100 pt-5">
         <p className="text-sm font-semibold text-gray-700 mb-3">Organiser Details</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

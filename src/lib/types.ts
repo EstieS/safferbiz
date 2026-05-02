@@ -36,6 +36,8 @@ export interface Event {
   city: string | null
   country: string
   url: string | null
+  facebook_url: string | null
+  instagram_url: string | null
   organizer_name: string | null
   organizer_email: string | null
   organizer_phone: string | null
