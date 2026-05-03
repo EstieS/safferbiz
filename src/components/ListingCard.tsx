@@ -36,7 +36,9 @@ export default function ListingCard({ listing }: Props) {
               {listing.business_name}
             </h3>
             <p className="text-xs text-gray-500">
-              {listing.city ? `${listing.city}, ` : ''}{listing.country}
+              {listing.city ? `${listing.city}, ` : ''}
+              {listing.country === 'United States' && listing.state ? `${listing.state}, ` : ''}
+              {listing.country}
             </p>
           </div>
         </div>

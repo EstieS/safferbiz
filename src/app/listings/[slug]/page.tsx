@@ -62,7 +62,9 @@ export default async function ListingPage({ params }: Props) {
   if (!data) notFound()
 
   const listing = data as Listing
-  const location = [listing.city, listing.country].filter(Boolean).join(', ')
+  const location = listing.country === 'United States'
+    ? [listing.city, listing.state, listing.country].filter(Boolean).join(', ')
+    : [listing.city, listing.country].filter(Boolean).join(', ')
   const tags = listing.tags ?? []
 
   return (

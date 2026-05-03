@@ -11,6 +11,7 @@ export default function SubmitForm() {
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [customTag, setCustomTag] = useState('')
   const [sellsOnline, setSellsOnline] = useState(false)
+  const [selectedCountry, setSelectedCountry] = useState('')
 
   function toggleTag(tag: string) {
     setSelectedTags((prev) =>
@@ -117,6 +118,7 @@ export default function SubmitForm() {
             name="country"
             required
             defaultValue=""
+            onChange={e => setSelectedCountry(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-green-500 bg-white"
           >
             <option value="" disabled>Select a country</option>
@@ -127,13 +129,25 @@ export default function SubmitForm() {
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-        <input
-          name="city"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-green-500"
-          placeholder="e.g. Melbourne"
-        />
+      <div className={`grid gap-5 ${selectedCountry === 'United States' ? 'grid-cols-1 sm:grid-cols-2' : ''}`}>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+          <input
+            name="city"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-green-500"
+            placeholder="e.g. Los Angeles"
+          />
+        </div>
+        {selectedCountry === 'United States' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+            <input
+              name="state"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-green-500"
+              placeholder="e.g. California"
+            />
+          </div>
+        )}
       </div>
 
       <div

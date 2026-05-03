@@ -79,6 +79,7 @@ function ListingEditor({ listing, onSave }: { listing: Listing; onSave: (data: P
     category: listing.category ?? '',
     country: listing.country ?? '',
     city: listing.city ?? '',
+    state: listing.state ?? '',
     website_url: listing.website_url ?? '',
     email: listing.email ?? '',
     facebook_url: listing.facebook_url ?? '',
@@ -122,6 +123,13 @@ function ListingEditor({ listing, onSave }: { listing: Listing; onSave: (data: P
           <input value={fields.city} onChange={e => set('city', e.target.value)}
             className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" />
         </div>
+        {fields.country === 'United States' && (
+          <div>
+            <label className="text-xs text-gray-400">State</label>
+            <input value={fields.state} onChange={e => set('state', e.target.value)}
+              className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" placeholder="e.g. California" />
+          </div>
+        )}
         <div>
           <label className="text-xs text-gray-400">Website URL</label>
           <input value={fields.website_url} onChange={e => set('website_url', e.target.value)}

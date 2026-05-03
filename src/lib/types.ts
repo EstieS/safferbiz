@@ -8,6 +8,7 @@ export interface Listing {
   category: string
   country: string
   city: string | null
+  state: string | null
   website_url: string | null
   facebook_url: string | null
   instagram_url: string | null
