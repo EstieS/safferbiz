@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { Listing, ListingStatus, Event, EventStatus } from '@/lib/types'
-import { PRODUCT_TAGS } from '@/lib/constants'
+import { PRODUCT_TAGS, CATEGORIES, COUNTRIES } from '@/lib/constants'
 
 const STATUS_COLORS: Record<ListingStatus, string> = {
   active: 'bg-green-100 text-green-700',
@@ -68,6 +68,86 @@ function TagEditor({ listing, onSave }: { listing: Listing; onSave: (tags: strin
           Save Tags
         </button>
       </div>
+    </div>
+  )
+}
+
+function ListingEditor({ listing, onSave }: { listing: Listing; onSave: (data: Partial<Listing>) => void }) {
+  const [fields, setFields] = useState({
+    business_name: listing.business_name ?? '',
+    description: listing.description ?? '',
+    category: listing.category ?? '',
+    country: listing.country ?? '',
+    city: listing.city ?? '',
+    website_url: listing.website_url ?? '',
+    email: listing.email ?? '',
+    facebook_url: listing.facebook_url ?? '',
+    instagram_url: listing.instagram_url ?? '',
+  })
+
+  function set(key: string, value: string) {
+    setFields(prev => ({ ...prev, [key]: value }))
+  }
+
+  return (
+    <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
+      <p className="text-xs font-medium text-gray-500 mb-2">Edit Listing Details</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs text-gray-400">Business Name</label>
+          <input value={fields.business_name} onChange={e => set('business_name', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">Email</label>
+          <input value={fields.email} onChange={e => set('email', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" placeholder="contact@example.com" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">Category</label>
+          <select value={fields.category} onChange={e => set('category', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5 bg-white">
+            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">Country</label>
+          <select value={fields.country} onChange={e => set('country', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5 bg-white">
+            {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">City</label>
+          <input value={fields.city} onChange={e => set('city', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">Website URL</label>
+          <input value={fields.website_url} onChange={e => set('website_url', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" placeholder="https://..." />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">Facebook URL</label>
+          <input value={fields.facebook_url} onChange={e => set('facebook_url', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" placeholder="https://facebook.com/..." />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">Instagram URL</label>
+          <input value={fields.instagram_url} onChange={e => set('instagram_url', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" placeholder="https://instagram.com/..." />
+        </div>
+      </div>
+      <div>
+        <label className="text-xs text-gray-400">Description</label>
+        <textarea value={fields.description} onChange={e => set('description', e.target.value)}
+          rows={2} className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5 resize-none" />
+      </div>
+      <button onClick={() => onSave(fields)}
+        className="px-3 py-1 text-xs font-medium rounded text-white"
+        style={{ backgroundColor: '#007A4D' }}>
+        Save Changes
+      </button>
     </div>
   )
 }
@@ -260,6 +340,7 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
   const [filter, setFilter] = useState<ListingStatus | 'all'>('pending')
   const [busy, setBusy] = useState<string | null>(null)
   const [expandedTags, setExpandedTags] = useState<string | null>(null)
+  const [expandedEdit, setExpandedEdit] = useState<string | null>(null)
 
   const filtered = filter === 'all' ? listings : listings.filter((l) => l.status === filter)
 
@@ -291,6 +372,16 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
     })
     setListings((prev) => prev.map((l) => (l.id === id ? { ...l, tags } : l)))
     setExpandedTags(null)
+  }
+
+  async function saveListing(id: string, data: Partial<Listing>) {
+    await fetch(`/api/admin/listings/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    setListings((prev) => prev.map((l) => (l.id === id ? { ...l, ...data } : l)))
+    setExpandedEdit(null)
   }
 
   async function deleteListing(id: string) {
@@ -418,6 +509,12 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
                     >
                       Tags
                     </button>
+                    <button
+                      onClick={() => setExpandedEdit(expandedEdit === listing.id ? null : listing.id)}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50"
+                    >
+                      Edit
+                    </button>
                     {listing.website_url && (
                       <a
                         href={listing.website_url}
@@ -440,6 +537,9 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
 
                 {expandedTags === listing.id && (
                   <TagEditor listing={listing} onSave={(tags) => saveTags(listing.id, tags)} />
+                )}
+                {expandedEdit === listing.id && (
+                  <ListingEditor listing={listing} onSave={(data) => saveListing(listing.id, data)} />
                 )}
               </div>
             ))}
