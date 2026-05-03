@@ -100,14 +100,14 @@ export default async function ListingPage({ params }: Props) {
 
         {listing.description && (
           <div className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">About</h2>
+            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-2 pl-3 border-l-4 border-green-500">About</h2>
             <p className="text-gray-700 leading-relaxed">{listing.description}</p>
           </div>
         )}
 
         {tags.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Products & Services</h2>
+            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3 pl-3 border-l-4 border-green-500">Products & Services</h2>
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => (
                 <Link
@@ -123,7 +123,7 @@ export default async function ListingPage({ params }: Props) {
         )}
 
         <div className="border-t border-gray-100 pt-6 space-y-3">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Contact & Links</h2>
+          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3 pl-3 border-l-4 border-green-500">Contact & Links</h2>
 
           {listing.website_url && (
             <a
