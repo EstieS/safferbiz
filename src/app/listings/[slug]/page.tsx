@@ -65,7 +65,7 @@ export default async function ListingPage({ params }: Props) {
   const location = listing.country === 'United States'
     ? [listing.city, listing.state, listing.country].filter(Boolean).join(', ')
     : [listing.city, listing.country].filter(Boolean).join(', ')
-  const tags = listing.tags ?? []
+  const tags = [...(listing.tags ?? [])].sort()
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">

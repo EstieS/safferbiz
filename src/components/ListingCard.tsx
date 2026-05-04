@@ -7,7 +7,7 @@ interface Props {
 }
 
 export default function ListingCard({ listing }: Props) {
-  const tags = listing.tags ?? []
+  const tags = [...(listing.tags ?? [])].sort()
 
   return (
     <Link href={`/listings/${listing.slug}`} className="block group">
