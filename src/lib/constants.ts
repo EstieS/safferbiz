@@ -71,7 +71,7 @@ export const PRODUCT_TAGS = [
   'Rooibos',
   'Rusks',
   'Spices',
-  'Spit Roast',
+  'Spit Braai',
   'Springbok',
   'Vetkoek',
   'Wine',
