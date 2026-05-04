@@ -16,10 +16,15 @@ export async function sendNewListingAlert(params: {
   const listingUrl = `${SITE}/listings/${listing.slug}`
   const location = [listing.city, listing.country].filter(Boolean).join(', ')
 
+  function truncate(text: string, max: number) {
+    if (text.length <= max) return text
+    return text.substring(0, text.lastIndexOf(' ', max)) + '...'
+  }
+
   const messages = subscribers.map((sub) => ({
     to: sub.email,
     from: { email: FROM, name: 'SafferBiz' },
-    subject: `New SA business listed: ${listing.business_name}`,
+    subject: `New listing on SafferBiz: ${listing.business_name}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: #007A4D; padding: 24px; text-align: center;">
@@ -27,12 +32,12 @@ export async function sendNewListingAlert(params: {
         </div>
         <div style="padding: 32px 24px;">
           <p style="color: #555; margin-top: 0;">Hi ${sub.name},</p>
-          <p style="color: #555;">A new South African business has just been listed on SafferBiz that matches your preferences!</p>
+          <p style="color: #555;">A new South African business has just been added to SafferBiz — check it out!</p>
 
           <div style="background: #f9f9f9; border-left: 4px solid #007A4D; padding: 20px; border-radius: 4px; margin: 24px 0;">
             <h2 style="margin: 0 0 8px; color: #111;">${listing.business_name}</h2>
             <p style="margin: 0 0 4px; color: #007A4D; font-size: 14px;">📍 ${location} &nbsp;·&nbsp; ${listing.category}</p>
-            ${listing.description ? `<p style="margin: 12px 0 0; color: #555; font-size: 14px;">${listing.description}</p>` : ''}
+            ${listing.description ? `<p style="margin: 12px 0 0; color: #555; font-size: 14px;">${truncate(listing.description, 180)}</p>` : ''}
           </div>
 
           <a href="${listingUrl}" style="display: inline-block; background: #007A4D; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
