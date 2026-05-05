@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server'
-import { sendNewListingAlert } from '@/lib/sendgrid'
+import { sendNewListingAlert, sendListingApprovedEmail } from '@/lib/sendgrid'
 
 async function requireAdmin() {
   const supabase = await createServerSupabaseClient()
@@ -26,11 +26,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       // Fetch the full listing
       const { data: listing } = await admin
         .from('listings')
-        .select('business_name, slug, category, city, country, description')
+        .select('business_name, slug, category, city, country, description, email')
         .eq('id', id)
         .single()
 
       if (listing) {
+        // Email the business owner
+        if (listing.email) {
+          await sendListingApprovedEmail({
+            business_name: listing.business_name,
+            slug: listing.slug,
+            email: listing.email,
+          }).catch(err => console.error('Failed to send approval email to business:', err))
+        }
         // Fetch matching subscribers:
         // - countries array is empty OR contains this listing's country
         // - categories array is empty OR contains this listing's category

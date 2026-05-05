@@ -24,7 +24,7 @@ export async function sendNewListingAlert(params: {
   const messages = subscribers.map((sub) => ({
     to: sub.email,
     from: { email: FROM, name: 'SafferBiz' },
-    subject: `New listing on SafferBiz: ${listing.business_name}`,
+    subject: `New SA business listed: ${listing.business_name}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: #007A4D; padding: 24px; text-align: center;">
@@ -32,7 +32,7 @@ export async function sendNewListingAlert(params: {
         </div>
         <div style="padding: 32px 24px;">
           <p style="color: #555; margin-top: 0;">Hi ${sub.name},</p>
-          <p style="color: #555;">A new South African business has just been added to SafferBiz — check it out!</p>
+          <p style="color: #555;">A new South African business has just been listed on SafferBiz that matches your preferences!</p>
 
           <div style="background: #f9f9f9; border-left: 4px solid #007A4D; padding: 20px; border-radius: 4px; margin: 24px 0;">
             <h2 style="margin: 0 0 8px; color: #111;">${listing.business_name}</h2>
@@ -101,6 +101,46 @@ export async function sendNewEventAlert(params: {
   }))
 
   await sgMail.send(messages)
+}
+
+// Notify business owner when their listing is approved
+export async function sendListingApprovedEmail(listing: {
+  business_name: string
+  slug: string
+  email: string
+}) {
+  const listingUrl = `${SITE}/listings/${listing.slug}`
+
+  await sgMail.send({
+    to: listing.email,
+    from: { email: FROM, name: 'SafferBiz' },
+    subject: `Your SafferBiz listing is live! 🎉`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #007A4D; padding: 24px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Saffer<span style="color: #FFB612;">Biz</span></h1>
+        </div>
+        <div style="padding: 32px 24px;">
+          <p style="color: #555; margin-top: 0;">Great news!</p>
+          <p style="color: #555;">Your listing for <strong>${listing.business_name}</strong> has been approved and is now live on SafferBiz. South African expats worldwide can now find you!</p>
+
+          <a href="${listingUrl}" style="display: inline-block; background: #007A4D; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 16px 0;">
+            View Your Listing →
+          </a>
+
+          <p style="color: #555; margin-top: 24px;">A few tips to make the most of your listing:</p>
+          <ul style="color: #555; font-size: 14px; line-height: 1.8;">
+            <li>Share your listing link with your customers</li>
+            <li>Add it to your social media profiles</li>
+            <li>Let us know if any details need updating — just reply to this email</li>
+          </ul>
+
+          <p style="color: #555;">Thank you for being part of the SafferBiz community!</p>
+          <p style="color: #555;">Cheers,<br/>Estie<br/>SafferBiz</p>
+        </div>
+      </div>
+    `,
+  })
 }
 
 // Notify admin when a new listing is submitted and needs review
