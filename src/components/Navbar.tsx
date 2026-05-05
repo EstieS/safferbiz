@@ -99,48 +99,28 @@ export default function Navbar() {
       </div>
 
       {menuOpen && (
-        <div className="md:hidden border-t border-gray-200 bg-white px-4 py-3 space-y-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider pt-1">Categories</p>
-          {CATEGORIES.map((cat) => (
-            <Link
-              key={cat}
-              href={`/category/${encodeURIComponent(cat.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-'))}`}
-              className="block py-1 text-sm text-gray-700"
-              onClick={() => setMenuOpen(false)}
-            >
-              {cat}
-            </Link>
-          ))}
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider pt-2">Countries</p>
-          {COUNTRIES.map((country) => (
-            <Link
-              key={country}
-              href={`/country/${encodeURIComponent(country.toLowerCase().replace(/ /g, '-'))}`}
-              className="block py-1 text-sm text-gray-700"
-              onClick={() => setMenuOpen(false)}
-            >
-              {country}
-            </Link>
-          ))}
-          <Link href="/about" className="block py-1 text-sm font-medium text-gray-700" onClick={() => setMenuOpen(false)}>
+        <div className="md:hidden border-t border-gray-200 bg-white px-4 py-3 space-y-1">
+          <Link href="/#categories" className="block py-2 text-sm font-medium text-gray-700 hover:text-green-700" onClick={() => setMenuOpen(false)}>
+            Categories
+          </Link>
+          <Link href="/#countries" className="block py-2 text-sm font-medium text-gray-700 hover:text-green-700" onClick={() => setMenuOpen(false)}>
+            Countries
+          </Link>
+          <Link href="/about" className="block py-2 text-sm font-medium text-gray-700 hover:text-green-700" onClick={() => setMenuOpen(false)}>
             About
           </Link>
-          <Link href="/events" className="block py-1 text-sm font-medium text-gray-700" onClick={() => setMenuOpen(false)}>
+          <Link href="/events" className="block py-2 text-sm font-medium text-gray-700 hover:text-green-700" onClick={() => setMenuOpen(false)}>
             🎉 Events
           </Link>
-          <Link href="/subscribe" className="block py-1 text-sm font-medium text-gray-700" onClick={() => setMenuOpen(false)}>
-            🔔 Get Alerts
-          </Link>
-          <Link
-            href="/near-me"
-            className="block py-1 text-sm font-medium text-gray-700"
-            onClick={() => setMenuOpen(false)}
-          >
+          <Link href="/near-me" className="block py-2 text-sm font-medium text-gray-700 hover:text-green-700" onClick={() => setMenuOpen(false)}>
             📍 Near Me
+          </Link>
+          <Link href="/subscribe" className="block py-2 text-sm font-medium text-gray-700 hover:text-green-700" onClick={() => setMenuOpen(false)}>
+            🔔 Alerts
           </Link>
           <Link
             href="/submit"
-            className="block mt-2 text-center text-sm font-medium text-white px-4 py-2 rounded-lg"
+            className="block mt-3 text-center text-sm font-medium text-white px-4 py-2.5 rounded-lg"
             style={{ backgroundColor: '#007A4D' }}
             onClick={() => setMenuOpen(false)}
           >
