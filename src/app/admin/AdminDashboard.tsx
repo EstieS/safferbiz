@@ -85,6 +85,7 @@ function ListingEditor({ listing, onSave }: { listing: Listing; onSave: (data: P
     facebook_url: listing.facebook_url ?? '',
     instagram_url: listing.instagram_url ?? '',
   })
+  const [featureOnSocial, setFeatureOnSocial] = useState(listing.feature_on_social ?? false)
 
   function set(key: string, value: string) {
     setFields(prev => ({ ...prev, [key]: value }))
@@ -151,7 +152,20 @@ function ListingEditor({ listing, onSave }: { listing: Listing; onSave: (data: P
         <textarea value={fields.description} onChange={e => set('description', e.target.value)}
           rows={2} className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5 resize-none" />
       </div>
-      <button onClick={() => onSave(fields)}
+      <div
+        onClick={() => setFeatureOnSocial(!featureOnSocial)}
+        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
+          featureOnSocial ? 'border-pink-400 bg-pink-50' : 'border-gray-200 bg-white hover:border-pink-300'
+        }`}
+      >
+        <div className={`w-4 h-4 rounded flex-shrink-0 flex items-center justify-center border-2 transition-all ${
+          featureOnSocial ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+        }`}>
+          {featureOnSocial && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+        </div>
+        <p className="text-xs text-gray-700">📱 Feature on SafferBiz social media</p>
+      </div>
+      <button onClick={() => onSave({ ...fields, feature_on_social: featureOnSocial })}
         className="px-3 py-1 text-xs font-medium rounded text-white"
         style={{ backgroundColor: '#007A4D' }}>
         Save Changes

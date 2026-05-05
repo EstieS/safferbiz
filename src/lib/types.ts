@@ -17,6 +17,7 @@ export interface Listing {
   status: ListingStatus
   tags: string[]
   sells_online: boolean
+  feature_on_social: boolean
   latitude: number | null
   longitude: number | null
   created_at: string

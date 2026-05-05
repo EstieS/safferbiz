@@ -11,6 +11,7 @@ export default function SubmitForm() {
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [customTag, setCustomTag] = useState('')
   const [sellsOnline, setSellsOnline] = useState(false)
+  const [featureOnSocial, setFeatureOnSocial] = useState(false)
   const [selectedCountry, setSelectedCountry] = useState('')
 
   function toggleTag(tag: string) {
@@ -39,7 +40,7 @@ export default function SubmitForm() {
       const res = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, tags: selectedTags, sells_online: sellsOnline }),
+        body: JSON.stringify({ ...data, tags: selectedTags, sells_online: sellsOnline, feature_on_social: featureOnSocial }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Submission failed')
@@ -164,6 +165,23 @@ export default function SubmitForm() {
         <div>
           <p className="text-sm font-medium text-gray-800">🛒 This business accepts online orders</p>
           <p className="text-xs text-gray-500 mt-0.5">Check this if customers can browse and order from your website (even if you also have a physical store)</p>
+        </div>
+      </div>
+
+      <div
+        onClick={() => setFeatureOnSocial(!featureOnSocial)}
+        className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+          featureOnSocial ? 'border-pink-400 bg-pink-50' : 'border-gray-200 hover:border-pink-300 bg-white'
+        }`}
+      >
+        <div className={`mt-0.5 w-5 h-5 rounded flex-shrink-0 flex items-center justify-center border-2 transition-all ${
+          featureOnSocial ? 'bg-pink-500 border-pink-500' : 'border-gray-300'
+        }`}>
+          {featureOnSocial && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-800">📱 Feature my business on SafferBiz social media</p>
+          <p className="text-xs text-gray-500 mt-0.5">We may occasionally share your business on our Facebook and Instagram pages to help you reach more SA expats</p>
         </div>
       </div>
 
