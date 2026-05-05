@@ -2,17 +2,21 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Listing } from '@/lib/types'
 
+const POPULAR_THRESHOLD = 50
+
 interface Props {
   listing: Listing
 }
 
 export default function ListingCard({ listing }: Props) {
   const tags = [...(listing.tags ?? [])].sort()
+  const isPopular = (listing.view_count ?? 0) >= POPULAR_THRESHOLD
 
   return (
     <Link href={`/listings/${listing.slug}`} className="block group">
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-lg hover:border-green-400 transition-all h-full flex flex-col relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-1 rounded-t-xl" style={{ backgroundColor: '#007A4D' }} />
+
         <div className="flex items-start gap-3 mb-3">
           {listing.logo_url ? (
             <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
@@ -31,7 +35,14 @@ export default function ListingCard({ listing }: Props) {
               {listing.business_name.charAt(0).toUpperCase()}
             </div>
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
+            {isPopular && (
+              <div className="mb-0.5">
+                <span className="inline-flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 border border-orange-200">
+                  🔥 Popular
+                </span>
+              </div>
+            )}
             <h3 className="font-semibold text-gray-900 group-hover:text-green-700 transition-colors truncate">
               {listing.business_name}
             </h3>

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import ListingCard from '@/components/ListingCard'
 import SearchBar from '@/components/SearchBar'
+import NewsletterBanner from '@/components/NewsletterBanner'
 import { CATEGORIES, COUNTRIES, PRODUCT_TAGS } from '@/lib/constants'
 import type { Listing } from '@/lib/types'
 
@@ -158,6 +159,8 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      <NewsletterBanner />
 
       {/* CTA */}
       <section className="py-14 px-4 bg-white border-t border-gray-100">

@@ -481,6 +481,10 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
                       {listing.city ? `${listing.city}, ` : ''}{listing.country}
                       {listing.email ? ` · ${listing.email}` : ''}
                     </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      👁 {listing.view_count ?? 0} views · 🔗 {listing.click_count ?? 0} clicks
+                      {(listing.view_count ?? 0) >= 50 && <span className="ml-1 text-orange-500 font-medium">🔥 Popular</span>}
+                    </p>
                     {listing.description && (
                       <p className="text-xs text-gray-400 mt-1 line-clamp-1">{listing.description}</p>
                     )}

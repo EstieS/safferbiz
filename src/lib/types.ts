@@ -18,6 +18,8 @@ export interface Listing {
   tags: string[]
   sells_online: boolean
   feature_on_social: boolean
+  view_count: number
+  click_count: number
   latitude: number | null
   longitude: number | null
   created_at: string

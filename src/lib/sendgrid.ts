@@ -227,3 +227,54 @@ export async function sendSubscriptionConfirmation(subscriber: {
     `,
   })
 }
+
+// Monthly stats email to a business — views and clicks
+export async function sendListingStatsEmail(listing: {
+  business_name: string
+  slug: string
+  email: string
+  view_count: number
+  click_count: number
+}) {
+  const listingUrl = `${SITE}/listings/${listing.slug}`
+  const isPopular = listing.view_count >= 50
+
+  await sgMail.send({
+    to: listing.email,
+    from: { email: FROM, name: 'SafferBiz' },
+    subject: `Your SafferBiz listing stats for ${new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #007A4D; padding: 24px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Saffer<span style="color: #FFB612;">Biz</span></h1>
+        </div>
+        <div style="padding: 32px 24px;">
+          <p style="color: #555; margin-top: 0;">Hi there,</p>
+          <p style="color: #555;">Here's how your listing for <strong>${listing.business_name}</strong> is performing on SafferBiz:</p>
+
+          <div style="display: flex; gap: 16px; margin: 24px 0;">
+            <div style="flex: 1; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 20px; text-align: center;">
+              <p style="margin: 0; font-size: 36px; font-weight: bold; color: #007A4D;">${listing.view_count}</p>
+              <p style="margin: 8px 0 0; font-size: 13px; color: #555;">👁 Total views</p>
+            </div>
+            <div style="flex: 1; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 20px; text-align: center;">
+              <p style="margin: 0; font-size: 36px; font-weight: bold; color: #1d4ed8;">${listing.click_count}</p>
+              <p style="margin: 8px 0 0; font-size: 13px; color: #555;">🔗 Link clicks</p>
+            </div>
+          </div>
+
+          ${isPopular ? `<p style="color: #ea580c; font-size: 14px; font-weight: bold; margin-bottom: 16px;">🔥 Your listing has earned the Popular badge — SA expats are finding you!</p>` : ''}
+
+          <a href="${listingUrl}" style="display: inline-block; background: #007A4D; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 13px;">
+            View Your Listing →
+          </a>
+
+          <p style="margin-top: 32px; color: #555; font-size: 13px;">
+            Need to update your listing details? Just reply to this email.<br/><br/>
+            Cheers,<br/>Estie<br/>SafferBiz
+          </p>
+        </div>
+      </div>
+    `,
+  })
+}

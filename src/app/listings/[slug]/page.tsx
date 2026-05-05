@@ -4,6 +4,10 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import type { Listing } from '@/lib/types'
+import ViewTracker from '@/components/ViewTracker'
+import ListingLinks from '@/components/ListingLinks'
+
+const POPULAR_THRESHOLD = 50
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -33,18 +37,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    openGraph: {
-      title,
-      description,
-      url,
-      type: 'website',
-      siteName: 'SafferBiz',
-    },
-    twitter: {
-      card: 'summary',
-      title,
-      description,
-    },
+    openGraph: { title, description, url, type: 'website', siteName: 'SafferBiz' },
+    twitter: { card: 'summary', title, description },
   }
 }
 
@@ -66,9 +60,12 @@ export default async function ListingPage({ params }: Props) {
     ? [listing.city, listing.state, listing.country].filter(Boolean).join(', ')
     : [listing.city, listing.country].filter(Boolean).join(', ')
   const tags = [...(listing.tags ?? [])].sort()
+  const isPopular = (listing.view_count ?? 0) >= POPULAR_THRESHOLD
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
+      <ViewTracker slug={slug} />
+
       <Link href="/" className="text-sm text-gray-500 hover:text-green-700 mb-6 inline-block">
         ← Back to listings
       </Link>
@@ -88,7 +85,14 @@ export default async function ListingPage({ params }: Props) {
             </div>
           )}
 
-          <div>
+          <div className="min-w-0">
+            {isPopular && (
+              <div className="mb-2">
+                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-orange-100 text-orange-600 border border-orange-200">
+                  🔥 Popular
+                </span>
+              </div>
+            )}
             <h1 className="text-3xl font-bold text-gray-900">{listing.business_name}</h1>
             <p className="text-gray-500 mt-1">{location}</p>
             <span
@@ -124,45 +128,13 @@ export default async function ListingPage({ params }: Props) {
           </div>
         )}
 
-        <div className="border-t border-gray-100 pt-6 space-y-3">
-          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3 pl-3 border-l-4 border-green-500">Contact & Links</h2>
-
-          {listing.website_url && (
-            <a
-              href={listing.website_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-green-700 hover:underline"
-            >
-              <span>🌐</span> {listing.website_url}
-            </a>
-          )}
-          {listing.email && (
-            <a href={`mailto:${listing.email}`} className="flex items-center gap-2 text-sm text-green-700 hover:underline">
-              <span>✉️</span> {listing.email}
-            </a>
-          )}
-          {listing.facebook_url && (
-            <a
-              href={listing.facebook_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
-            >
-              <span>📘</span> Facebook
-            </a>
-          )}
-          {listing.instagram_url && (
-            <a
-              href={listing.instagram_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-pink-600 hover:underline"
-            >
-              <span>📷</span> Instagram
-            </a>
-          )}
-        </div>
+        <ListingLinks
+          slug={slug}
+          website_url={listing.website_url}
+          email={listing.email}
+          facebook_url={listing.facebook_url}
+          instagram_url={listing.instagram_url}
+        />
       </div>
     </div>
   )
