@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server'
 import { sendNewListingAlert, sendListingApprovedEmail } from '@/lib/sendgrid'
+import { generateListingPost } from '@/lib/social-posts'
 
 async function requireAdmin() {
   const supabase = await createServerSupabaseClient()
@@ -20,13 +21,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { error } = await admin.from('listings').update(body).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // If approving a listing, send alerts to matching subscribers
+  // If approving a listing, send alerts + generate social post draft
   if (body.status === 'active') {
     try {
       // Fetch the full listing
       const { data: listing } = await admin
         .from('listings')
-        .select('business_name, slug, category, city, country, description, email')
+        .select('business_name, slug, category, city, state, country, description, email, website_url, tags, sells_online, feature_on_social')
         .eq('id', id)
         .single()
 
@@ -39,9 +40,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             email: listing.email,
           }).catch(err => console.error('Failed to send approval email to business:', err))
         }
-        // Fetch matching subscribers:
-        // - countries array is empty OR contains this listing's country
-        // - categories array is empty OR contains this listing's category
+
+        // Alert matching subscribers
         const { data: subscribers } = await admin
           .from('subscribers')
           .select('name, email, unsubscribe_token, countries, categories')
@@ -55,9 +55,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (matched.length > 0) {
           await sendNewListingAlert({ subscribers: matched, listing })
         }
+
+        // Generate social post draft — only if business opted in to social features
+        if (listing.feature_on_social) {
+          generateListingPost(listing).catch(err =>
+            console.error('Failed to generate social post draft:', err)
+          )
+        }
       }
     } catch (emailErr) {
-      // Don't fail the approval if email sending fails — just log it
       console.error('Failed to send listing alert emails:', emailErr)
     }
   }
