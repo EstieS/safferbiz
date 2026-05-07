@@ -13,7 +13,7 @@ export default async function HomePage() {
     .from('listings')
     .select('*')
     .eq('status', 'active')
-    .order('created_at', { ascending: false })
+    .order('updated_at', { ascending: false })
     .limit(8)
 
   const listings = (recentListings ?? []) as Listing[]
