@@ -48,37 +48,37 @@ const COUNTRY_REGION: Record<string, keyof typeof REGION_COLORS> = {
   'Israel':               'africa',
 }
 
-// ─── Country → flag emoji ─────────────────────────────────────────────────
+// ─── Country → ISO 3166-1 alpha-2 code ────────────────────────────────────
+// Used to render flag images via flagcdn.com (works on Windows too)
 
-const COUNTRY_FLAG: Record<string, string> = {
-  'Australia':            '🇦🇺',
-  'Canada':               '🇨🇦',
-  'China':                '🇨🇳',
-  'Colombia':             '🇨🇴',
-  'France':               '🇫🇷',
-  'Germany':              '🇩🇪',
-  'Greece':               '🇬🇷',
-  'Hong Kong':            '🇭🇰',
-  'India':                '🇮🇳',
-  'Ireland':              '🇮🇪',
-  'Israel':               '🇮🇱',
-  'Italy':                '🇮🇹',
-  'Luxembourg':           '🇱🇺',
-  'Mauritius':            '🇲🇺',
-  'Mexico':               '🇲🇽',
-  'Netherlands':          '🇳🇱',
-  'New Zealand':          '🇳🇿',
-  'Poland':               '🇵🇱',
-  'Portugal':             '🇵🇹',
-  'Singapore':            '🇸🇬',
-  'South Africa':         '🇿🇦',
-  'South Korea':          '🇰🇷',
-  'Spain':                '🇪🇸',
-  'Thailand':             '🇹🇭',
-  'United Arab Emirates': '🇦🇪',
-  'United Kingdom':       '🇬🇧',
-  'United States':        '🇺🇸',
-  'Other':                '🌍',
+const COUNTRY_CODE: Record<string, string> = {
+  'Australia':            'au',
+  'Canada':               'ca',
+  'China':                'cn',
+  'Colombia':             'co',
+  'France':               'fr',
+  'Germany':              'de',
+  'Greece':               'gr',
+  'Hong Kong':            'hk',
+  'India':                'in',
+  'Ireland':              'ie',
+  'Israel':               'il',
+  'Italy':                'it',
+  'Luxembourg':           'lu',
+  'Mauritius':            'mu',
+  'Mexico':               'mx',
+  'Netherlands':          'nl',
+  'New Zealand':          'nz',
+  'Poland':               'pl',
+  'Portugal':             'pt',
+  'Singapore':            'sg',
+  'South Africa':         'za',
+  'South Korea':          'kr',
+  'Spain':                'es',
+  'Thailand':             'th',
+  'United Arab Emirates': 'ae',
+  'United Kingdom':       'gb',
+  'United States':        'us',
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -89,5 +89,7 @@ export function getRegionColor(country: string): string {
 }
 
 export function getCountryFlag(country: string): string {
-  return COUNTRY_FLAG[country] ?? '🌍'
+  const code = COUNTRY_CODE[country]
+  if (!code) return ''   // "Other" — caller should show 🌍 text fallback
+  return `https://flagcdn.com/20x15/${code}.png`
 }

@@ -59,9 +59,12 @@ export default function ListingCard({ listing }: Props) {
             <h3 className="font-semibold text-gray-900 group-hover:text-green-700 transition-colors truncate">
               {listing.business_name}
             </h3>
-            {/* Location — flag emoji + city/country, more prominent */}
-            <p className="text-sm font-medium text-gray-600 mt-0.5 truncate">
-              <span className="mr-1">{flag}</span>
+            {/* Location — flag image + city/country, more prominent */}
+            <p className="text-sm font-medium text-gray-600 mt-0.5 truncate flex items-center gap-1.5">
+              {flag
+                ? <img src={flag} alt={listing.country} width={20} height={15} className="inline-block flex-shrink-0" />
+                : <span>🌍</span>
+              }
               {location}
             </p>
           </div>

@@ -96,8 +96,12 @@ export default async function ListingPage({ params }: Props) {
               </div>
             )}
             <h1 className="text-3xl font-bold text-gray-900">{listing.business_name}</h1>
-            <p className="text-base font-medium text-gray-600 mt-1">
-              <span className="mr-1">{flag}</span>{location}
+            <p className="text-base font-medium text-gray-600 mt-1 flex items-center gap-1.5">
+              {flag
+                ? <img src={flag} alt={listing.country} width={20} height={15} className="inline-block flex-shrink-0" />
+                : <span>🌍</span>
+              }
+              {location}
             </p>
             <span
               className="inline-block mt-2 text-xs font-medium px-3 py-1 rounded-full"

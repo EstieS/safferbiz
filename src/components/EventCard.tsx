@@ -58,8 +58,11 @@ export default function EventCard({ event }: Props) {
 
               {/* City + Country — flag emoji + prominent text */}
               {cityCountry && (
-                <p className="mt-1 text-sm font-semibold text-gray-700 truncate">
-                  <span className="mr-1">{flag}</span>
+                <p className="mt-1 text-sm font-semibold text-gray-700 truncate flex items-center gap-1.5">
+                  {flag
+                    ? <img src={flag} alt={event.country} width={20} height={15} className="inline-block flex-shrink-0" />
+                    : <span>🌍</span>
+                  }
                   {cityCountry}
                 </p>
               )}
