@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import type { Listing } from '@/lib/types'
+import { getRegionColor, getCountryFlag } from '@/lib/regions'
 
 const POPULAR_THRESHOLD = 50
 
@@ -11,13 +12,24 @@ interface Props {
 export default function ListingCard({ listing }: Props) {
   const tags = [...(listing.tags ?? [])].sort()
   const isPopular = (listing.view_count ?? 0) >= POPULAR_THRESHOLD
+  const regionColor = getRegionColor(listing.country)
+  const flag = getCountryFlag(listing.country)
+
+  const locationParts = [
+    listing.city,
+    listing.country === 'United States' && listing.state ? listing.state : null,
+    listing.country,
+  ].filter(Boolean)
+  const location = locationParts.join(', ')
 
   return (
     <Link href={`/listings/${listing.slug}`} className="block group">
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 hover:shadow-lg hover:border-green-400 transition-all h-full flex flex-col relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 rounded-t-xl" style={{ backgroundColor: '#007A4D' }} />
 
-        <div className="flex items-start gap-3 mb-3">
+        {/* Regional colour stripe — SA flag colour based on country */}
+        <div className="absolute top-0 left-0 right-0 h-1.5 rounded-t-xl" style={{ backgroundColor: regionColor }} />
+
+        <div className="flex items-start gap-3 mb-3 mt-1">
           {listing.logo_url ? (
             <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
               <Image
@@ -30,11 +42,12 @@ export default function ListingCard({ listing }: Props) {
           ) : (
             <div
               className="w-12 h-12 rounded-lg flex-shrink-0 flex items-center justify-center text-white font-bold text-lg"
-              style={{ backgroundColor: '#007A4D' }}
+              style={{ backgroundColor: regionColor }}
             >
               {listing.business_name.charAt(0).toUpperCase()}
             </div>
           )}
+
           <div className="min-w-0 flex-1">
             {isPopular && (
               <div className="mb-0.5">
@@ -46,16 +59,16 @@ export default function ListingCard({ listing }: Props) {
             <h3 className="font-semibold text-gray-900 group-hover:text-green-700 transition-colors truncate">
               {listing.business_name}
             </h3>
-            <p className="text-xs text-gray-500">
-              {listing.city ? `${listing.city}, ` : ''}
-              {listing.country === 'United States' && listing.state ? `${listing.state}, ` : ''}
-              {listing.country}
+            {/* Location — flag emoji + city/country, more prominent */}
+            <p className="text-sm font-medium text-gray-600 mt-0.5 truncate">
+              <span className="mr-1">{flag}</span>
+              {location}
             </p>
           </div>
         </div>
 
         {listing.description && (
-          <p className="text-sm text-gray-600 line-clamp-2 flex-1">{listing.description}</p>
+          <p className="text-sm text-gray-500 line-clamp-2 flex-1">{listing.description}</p>
         )}
 
         {tags.length > 0 && (
@@ -80,7 +93,7 @@ export default function ListingCard({ listing }: Props) {
           <div className="flex items-center gap-1 flex-wrap">
             <span
               className="text-xs font-medium px-2 py-1 rounded-full"
-              style={{ backgroundColor: '#007A4D20', color: '#007A4D' }}
+              style={{ backgroundColor: `${regionColor}18`, color: regionColor }}
             >
               {listing.category}
             </span>

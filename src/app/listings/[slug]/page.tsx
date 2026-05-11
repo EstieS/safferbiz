@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import type { Listing } from '@/lib/types'
 import ViewTracker from '@/components/ViewTracker'
 import ListingLinks from '@/components/ListingLinks'
+import { getCountryFlag } from '@/lib/regions'
 
 const POPULAR_THRESHOLD = 50
 
@@ -61,6 +62,7 @@ export default async function ListingPage({ params }: Props) {
     : [listing.city, listing.country].filter(Boolean).join(', ')
   const tags = [...(listing.tags ?? [])].sort()
   const isPopular = (listing.view_count ?? 0) >= POPULAR_THRESHOLD
+  const flag = getCountryFlag(listing.country)
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">
@@ -94,7 +96,9 @@ export default async function ListingPage({ params }: Props) {
               </div>
             )}
             <h1 className="text-3xl font-bold text-gray-900">{listing.business_name}</h1>
-            <p className="text-gray-500 mt-1">{location}</p>
+            <p className="text-base font-medium text-gray-600 mt-1">
+              <span className="mr-1">{flag}</span>{location}
+            </p>
             <span
               className="inline-block mt-2 text-xs font-medium px-3 py-1 rounded-full"
               style={{ backgroundColor: '#007A4D20', color: '#007A4D' }}
