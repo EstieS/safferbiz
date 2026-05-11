@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import type { Event } from '@/lib/types'
+import { getRegionColor, getCountryFlag } from '@/lib/regions'
 
 interface Props {
   event: Event
@@ -20,18 +21,22 @@ export default function EventCard({ event }: Props) {
   const isToday = daysUntil === 0
   const isSoon = daysUntil > 0 && daysUntil <= 7
 
+  const flag = getCountryFlag(event.country)
+  const regionColor = getRegionColor(event.country)
   const cityCountry = [event.city, event.country].filter(Boolean).join(', ')
 
   return (
     <Link href={`/events/${event.slug}`} className="block group">
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg hover:border-green-400 transition-all h-full flex flex-col relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 rounded-t-xl" style={{ backgroundColor: '#DE3831' }} />
+
+        {/* Regional colour stripe */}
+        <div className="absolute top-0 left-0 right-0 h-1.5 rounded-t-xl" style={{ backgroundColor: regionColor }} />
 
         <div className="p-4 flex flex-col h-full">
 
           {/* Date + title + location */}
           <div className="flex items-start gap-3 mb-3">
-            {/* Date badge */}
+            {/* Date badge — stays red, it's the event identity */}
             <div className="text-center bg-red-50 border border-red-100 rounded-lg px-3 py-1.5 flex-shrink-0 min-w-[52px]">
               <p className="text-xs font-bold text-red-600 uppercase leading-tight">
                 {new Date(event.event_date + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short' })}
@@ -51,10 +56,10 @@ export default function EventCard({ event }: Props) {
                 {event.title}
               </h3>
 
-              {/* City + Country — prominent, right under the title */}
+              {/* City + Country — flag emoji + prominent text */}
               {cityCountry && (
-                <p className="mt-1 text-sm font-semibold text-gray-700 flex items-center gap-1">
-                  <span className="text-red-500">📍</span>
+                <p className="mt-1 text-sm font-semibold text-gray-700 truncate">
+                  <span className="mr-1">{flag}</span>
                   {cityCountry}
                 </p>
               )}
@@ -66,7 +71,7 @@ export default function EventCard({ event }: Props) {
             <p className="text-xs text-gray-500 line-clamp-2 flex-1 mb-3">{event.description}</p>
           )}
 
-          {/* Venue + time — secondary details */}
+          {/* Venue + time */}
           <div className="space-y-0.5 mt-auto mb-3">
             {event.venue && (
               <p className="text-xs text-gray-400 flex items-center gap-1 truncate">
