@@ -1,0 +1,92 @@
+name: 🤖 Business Discovery Agent
+
+on:
+  # Runs every weekday at 8am UTC + weekends
+  schedule:
+    - cron: '0 8 * * 1'   # Monday    → South Africa
+    - cron: '0 8 * * 2'   # Tuesday   → United Kingdom
+    - cron: '0 8 * * 3'   # Wednesday → Australia
+    - cron: '0 8 * * 4'   # Thursday  → United States
+    - cron: '0 8 * * 5'   # Friday    → Netherlands
+    - cron: '0 8 * * 6'   # Saturday  → New Zealand
+    - cron: '0 8 * * 0'   # Sunday    → Canada
+
+  # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
+    inputs:
+      country:
+        description: 'Country to research (leave blank to use today''s schedule)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Dry run (preview only, no inserts)'
+        type: boolean
+        default: false
+      limit:
+        description: 'Max new listings to insert'
+        required: false
+        default: '10'
+
+jobs:
+  discover:
+    name: Discover SA Businesses
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Determine country from schedule
+        id: vars
+        run: |
+          # If manually triggered with a country, use it; otherwise use day-of-week
+          if [ -n "${{ github.event.inputs.country }}" ]; then
+            echo "country=${{ github.event.inputs.country }}" >> $GITHUB_OUTPUT
+          else
+            DAY=$(date +%u)
+            case $DAY in
+              1) COUNTRY="South Africa" ;;
+              2) COUNTRY="United Kingdom" ;;
+              3) COUNTRY="Australia" ;;
+              4) COUNTRY="United States" ;;
+              5) COUNTRY="Netherlands" ;;
+              6) COUNTRY="New Zealand" ;;
+              7) COUNTRY="Canada" ;;
+              *) COUNTRY="United Kingdom" ;;
+            esac
+            echo "country=$COUNTRY" >> $GITHUB_OUTPUT
+          fi
+
+          # Dry run flag
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "dry_run_flag=--dry-run" >> $GITHUB_OUTPUT
+          else
+            echo "dry_run_flag=" >> $GITHUB_OUTPUT
+          fi
+
+          # Limit
+          LIMIT="${{ github.event.inputs.limit }}"
+          echo "limit=${LIMIT:-10}" >> $GITHUB_OUTPUT
+
+      - name: Run discovery agent
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+        run: |
+          node scripts/discover-businesses.mjs \
+            --country="${{ steps.vars.outputs.country }}" \
+            --limit=${{ steps.vars.outputs.limit }} \
+            ${{ steps.vars.outputs.dry_run_flag }}
