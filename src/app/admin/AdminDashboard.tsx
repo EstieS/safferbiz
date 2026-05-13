@@ -250,7 +250,8 @@ function EventsPanel({ events: initialEvents }: { events: Event[] }) {
   const [busy, setBusy] = useState<string | null>(null)
   const [expandedEdit, setExpandedEdit] = useState<string | null>(null)
 
-  const filtered = filter === 'all' ? events : events.filter((e) => e.status === filter)
+  const filtered = (filter === 'all' ? events : events.filter((e) => e.status === filter))
+    .slice().sort((a, b) => a.title.localeCompare(b.title))
   const counts = {
     all: events.length,
     pending: events.filter((e) => e.status === 'pending').length,
@@ -364,7 +365,8 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
   const [expandedTags, setExpandedTags] = useState<string | null>(null)
   const [expandedEdit, setExpandedEdit] = useState<string | null>(null)
 
-  const filtered = filter === 'all' ? listings : listings.filter((l) => l.status === filter)
+  const filtered = (filter === 'all' ? listings : listings.filter((l) => l.status === filter))
+    .slice().sort((a, b) => a.business_name.localeCompare(b.business_name))
 
   async function updateStatus(id: string, status: ListingStatus) {
     setBusy(id)
