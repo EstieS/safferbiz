@@ -91,7 +91,8 @@ export default function EventCard({ event }: Props) {
 
           {/* Footer */}
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-100">
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: `${regionColor}18`, color: regionColor }}>
               {event.category}
             </span>
             <div className="flex items-center gap-2">
