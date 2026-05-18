@@ -18,7 +18,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json()
   const admin = createAdminClient()
 
-  const { error } = await admin.from('listings').update(body).eq('id', id)
+  // Stamp approved_at when approving so homepage can sort by it independently of updated_at
+  const updateData = body.status === 'active'
+    ? { ...body, approved_at: new Date().toISOString() }
+    : body
+
+  const { error } = await admin.from('listings').update(updateData).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // If approving a listing, send alerts + generate social post draft
