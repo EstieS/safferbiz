@@ -9,14 +9,26 @@ import type { Listing } from '@/lib/types'
 export default async function HomePage() {
   const supabase = await createServerSupabaseClient()
 
-  const { data: recentListings } = await supabase
-    .from('listings')
-    .select('*')
-    .eq('status', 'active')
-    .order('approved_at', { ascending: false, nullsFirst: false })
-    .limit(4)
+  const [{ data: recentListings }, { count: totalListings }, { data: countryRows }] =
+    await Promise.all([
+      supabase
+        .from('listings')
+        .select('*')
+        .eq('status', 'active')
+        .order('approved_at', { ascending: false, nullsFirst: false })
+        .limit(4),
+      supabase
+        .from('listings')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active'),
+      supabase
+        .from('listings')
+        .select('country')
+        .eq('status', 'active'),
+    ])
 
   const listings = (recentListings ?? []) as Listing[]
+  const countryCount = new Set((countryRows ?? []).map((r) => r.country).filter(Boolean)).size
 
   return (
     <div>
@@ -26,15 +38,68 @@ export default async function HomePage() {
         style={{ background: 'linear-gradient(135deg, #007A4D 0%, #005a38 100%)' }}
       >
         <div className="max-w-4xl mx-auto text-center">
+          <p className="text-green-200 text-sm font-medium uppercase tracking-widest mb-3">
+            Built by Saffers, for Saffers living abroad
+          </p>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
             Find South African Businesses<br />
             <span style={{ color: '#FFB612' }}>Wherever You Are</span>
           </h1>
-          <p className="text-green-100 text-lg mb-8 max-w-2xl mx-auto">
+          <p className="text-green-100 text-lg mb-6 max-w-2xl mx-auto">
             The directory for SA expats. Find biltong, boerewors, gifts from home,
             and South African-owned businesses around the world.
           </p>
+
+          {/* Live stats */}
+          <div className="flex items-center justify-center gap-6 mb-8">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-white">{totalListings ?? 0}</p>
+              <p className="text-green-200 text-xs uppercase tracking-wide">Businesses</p>
+            </div>
+            <div className="w-px h-10 bg-white/20" />
+            <div className="text-center">
+              <p className="text-3xl font-bold text-white">{countryCount}</p>
+              <p className="text-green-200 text-xs uppercase tracking-wide">Countries</p>
+            </div>
+            <div className="w-px h-10 bg-white/20" />
+            <div className="text-center">
+              <p className="text-3xl font-bold" style={{ color: '#FFB612' }}>Free</p>
+              <p className="text-green-200 text-xs uppercase tracking-wide">To list</p>
+            </div>
+          </div>
+
           <SearchBar />
+        </div>
+      </section>
+
+      {/* Recent listings — shown first so visitors see real businesses immediately */}
+      <section className="py-12 px-4 bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Recently Added</h2>
+            <Link href="/search" className="text-sm font-medium hover:underline" style={{ color: '#007A4D' }}>
+              View all →
+            </Link>
+          </div>
+
+          {listings.length === 0 ? (
+            <div className="text-center py-16 text-gray-400">
+              <p className="text-lg">No listings yet.</p>
+              <Link
+                href="/submit"
+                className="mt-4 inline-block text-sm font-medium text-white px-6 py-3 rounded-lg"
+                style={{ backgroundColor: '#007A4D' }}
+              >
+                Be the first to list your business
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {listings.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -129,34 +194,6 @@ export default async function HomePage() {
               More →
             </Link>
           </div>
-        </div>
-      </section>
-
-      {/* Recent listings */}
-      <section className="py-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Recently Added</h2>
-          </div>
-
-          {listings.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">
-              <p className="text-lg">No listings yet.</p>
-              <Link
-                href="/submit"
-                className="mt-4 inline-block text-sm font-medium text-white px-6 py-3 rounded-lg"
-                style={{ backgroundColor: '#007A4D' }}
-              >
-                Be the first to list your business
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {listings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
-          )}
         </div>
       </section>
 

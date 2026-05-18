@@ -1,11 +1,28 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
+const PLACEHOLDERS = [
+  "Try 'biltong in Sydney'...",
+  "Try 'boerewors in London'...",
+  "Try 'South African food in Toronto'...",
+  "Try 'braai supplies in New Zealand'...",
+  "Try 'koeksisters near me'...",
+  "Try 'SA grocery shop in Dubai'...",
+]
 
 export default function SearchBar() {
   const [query, setQuery] = useState('')
+  const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const router = useRouter()
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((i) => (i + 1) % PLACEHOLDERS.length)
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -20,8 +37,8 @@ export default function SearchBar() {
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search for a business, product, or service..."
-        className="flex-1 px-5 py-3 rounded-l-xl border border-white/40 focus:outline-none focus:border-white bg-white/15 text-white placeholder:text-white/70 text-sm backdrop-blur-sm"
+        placeholder={PLACEHOLDERS[placeholderIndex]}
+        className="flex-1 px-5 py-3 rounded-l-xl border border-white/40 focus:outline-none focus:border-white bg-white/15 text-white placeholder:text-white/70 text-sm backdrop-blur-sm transition-all"
       />
       <button
         type="submit"
