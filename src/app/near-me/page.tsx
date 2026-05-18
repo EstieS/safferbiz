@@ -10,6 +10,8 @@ interface ListingWithDistance extends Listing {
   distanceKm: number
 }
 
+const KM_TO_MI = 0.621371
+
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371
   const dLat = ((lat2 - lat1) * Math.PI) / 180
@@ -22,7 +24,13 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.asin(Math.sqrt(a))
 }
 
-function formatDistance(km: number): string {
+function formatDistance(km: number, useMiles: boolean): string {
+  if (useMiles) {
+    const mi = km * KM_TO_MI
+    if (mi < 0.1) return `${Math.round(mi * 5280)} ft away`
+    if (mi < 10) return `${mi.toFixed(1)} mi away`
+    return `${Math.round(mi)} mi away`
+  }
   if (km < 1) return `${Math.round(km * 1000)} m away`
   if (km < 10) return `${km.toFixed(1)} km away`
   return `${Math.round(km)} km away`
@@ -33,6 +41,7 @@ export default function NearMePage() {
   const [listings, setListings] = useState<ListingWithDistance[]>([])
   const [errorMsg, setErrorMsg] = useState('')
   const [radiusKm, setRadiusKm] = useState(50)
+  const [useMiles, setUseMiles] = useState(false)
 
   async function findNearMe() {
     setStatus('locating')
@@ -88,22 +97,40 @@ export default function NearMePage() {
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Search radius</p>
-            <div className="flex gap-2">
-              {radii.map((r) => (
+            <div className="flex items-center gap-3 mb-2">
+              <p className="text-sm font-medium text-gray-700">Search radius</p>
+              {/* km / miles toggle */}
+              <div className="flex rounded-full border border-gray-200 overflow-hidden text-xs font-medium">
                 <button
-                  key={r}
-                  onClick={() => setRadiusKm(r)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
-                    radiusKm === r
-                      ? 'text-white border-green-600'
-                      : 'border-gray-200 text-gray-600 hover:border-green-400'
-                  }`}
-                  style={radiusKm === r ? { backgroundColor: '#007A4D' } : {}}
-                >
-                  {r} km
-                </button>
-              ))}
+                  onClick={() => setUseMiles(false)}
+                  className={`px-3 py-1 transition-colors ${!useMiles ? 'text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                  style={!useMiles ? { backgroundColor: '#007A4D' } : {}}
+                >km</button>
+                <button
+                  onClick={() => setUseMiles(true)}
+                  className={`px-3 py-1 transition-colors ${useMiles ? 'text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                  style={useMiles ? { backgroundColor: '#007A4D' } : {}}
+                >mi</button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {radii.map((r) => {
+                const label = useMiles ? `${Math.round(r * KM_TO_MI)} mi` : `${r} km`
+                return (
+                  <button
+                    key={r}
+                    onClick={() => setRadiusKm(r)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                      radiusKm === r
+                        ? 'text-white border-green-600'
+                        : 'border-gray-200 text-gray-600 hover:border-green-400'
+                    }`}
+                    style={radiusKm === r ? { backgroundColor: '#007A4D' } : {}}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -127,9 +154,12 @@ export default function NearMePage() {
       {status === 'done' && (
         <>
           <p className="text-sm text-gray-500 mb-6">
-            {listings.length === 0
-              ? `No SA businesses found within ${radiusKm} km. Try increasing the radius.`
-              : `${listings.length} ${listings.length === 1 ? 'business' : 'businesses'} found within ${radiusKm} km`}
+            {(() => {
+              const label = useMiles ? `${Math.round(radiusKm * KM_TO_MI)} mi` : `${radiusKm} km`
+              return listings.length === 0
+                ? `No SA businesses found within ${label}. Try increasing the radius.`
+                : `${listings.length} ${listings.length === 1 ? 'business' : 'businesses'} found within ${label}`
+            })()}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -166,7 +196,7 @@ export default function NearMePage() {
                       {listing.category}
                     </span>
                     <span className="text-xs font-semibold text-green-700">
-                      📍 {formatDistance(listing.distanceKm)}
+                      📍 {formatDistance(listing.distanceKm, useMiles)}
                     </span>
                   </div>
                 </div>
