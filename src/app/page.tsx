@@ -9,7 +9,7 @@ import type { Listing } from '@/lib/types'
 export default async function HomePage() {
   const supabase = await createServerSupabaseClient()
 
-  const [{ data: recentListings }, { count: totalListings }, { data: countryRows }] =
+  const [{ data: recentListings }, { count: totalListings }, { data: countryRows }, { count: totalEvents }] =
     await Promise.all([
       supabase
         .from('listings')
@@ -25,6 +25,11 @@ export default async function HomePage() {
         .from('listings')
         .select('country')
         .eq('status', 'active'),
+      supabase
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .gte('event_date', new Date().toISOString().slice(0, 10)),
     ])
 
   const listings = (recentListings ?? []) as Listing[]
@@ -60,6 +65,11 @@ export default async function HomePage() {
             <div className="text-center">
               <p className="text-3xl font-bold text-white">{countryCount}</p>
               <p className="text-green-200 text-xs uppercase tracking-wide">Countries</p>
+            </div>
+            <div className="w-px h-10 bg-white/20" />
+            <div className="text-center">
+              <p className="text-3xl font-bold text-white">{totalEvents ?? 0}</p>
+              <p className="text-green-200 text-xs uppercase tracking-wide">Upcoming Events</p>
             </div>
             <div className="w-px h-10 bg-white/20" />
             <div className="text-center">
