@@ -1,4 +1,4 @@
-name: 🤖 Business Discovery Agent
+name: 🤖 Discovery Agents (Businesses + Events)
 
 on:
   # Runs every weekday at 8am UTC + weekends
@@ -77,7 +77,7 @@ jobs:
           LIMIT="${{ github.event.inputs.limit }}"
           echo "limit=${LIMIT:-10}" >> $GITHUB_OUTPUT
 
-      - name: Run discovery agent
+      - name: Run business discovery agent
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -87,6 +87,20 @@ jobs:
           SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
         run: |
           node scripts/discover-businesses.mjs \
+            --country="${{ steps.vars.outputs.country }}" \
+            --limit=${{ steps.vars.outputs.limit }} \
+            ${{ steps.vars.outputs.dry_run_flag }}
+
+      - name: Run event discovery agent
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+        run: |
+          node scripts/discover-events.mjs \
             --country="${{ steps.vars.outputs.country }}" \
             --limit=${{ steps.vars.outputs.limit }} \
             ${{ steps.vars.outputs.dry_run_flag }}
