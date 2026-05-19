@@ -67,10 +67,10 @@ export default async function HomePage() {
               <p className="text-green-200 text-xs uppercase tracking-wide">Countries</p>
             </div>
             <div className="w-px h-10 bg-white/20" />
-            <div className="text-center">
-              <p className="text-3xl font-bold text-white">{totalEvents ?? 0}</p>
-              <p className="text-green-200 text-xs uppercase tracking-wide">Upcoming Events</p>
-            </div>
+            <Link href="/events" className="text-center group">
+              <p className="text-3xl font-bold text-white group-hover:text-yellow-300 transition-colors">{totalEvents ?? 0}</p>
+              <p className="text-green-200 text-xs uppercase tracking-wide group-hover:text-yellow-300 transition-colors">Upcoming Events ↗</p>
+            </Link>
             <div className="w-px h-10 bg-white/20" />
             <div className="text-center">
               <p className="text-3xl font-bold" style={{ color: '#FFB612' }}>Free</p>
