@@ -29,7 +29,21 @@ const DAY_TO_COUNTRY = {
   4: 'United States',   // Thursday
   5: 'Netherlands',     // Friday
   6: 'New Zealand',     // Saturday
-  0: 'Canada',          // Sunday
+  0: 'rotate',          // Sunday → rotates through unlisted countries
+}
+
+// ─── Rotation list (mirrors discover-businesses.mjs) ─────────────────────────
+const ROTATE_COUNTRIES = [
+  'China', 'Colombia', 'France', 'Germany', 'Greece', 'Hong Kong',
+  'India', 'Ireland', 'Israel', 'Italy', 'Luxembourg', 'Mauritius',
+  'Mexico', 'Poland', 'Portugal', 'Singapore', 'South Korea', 'Spain',
+  'Thailand', 'United Arab Emirates',
+  '__worldwide__',
+]
+
+function getRotatingCountry() {
+  const weekNumber = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000))
+  return ROTATE_COUNTRIES[weekNumber % ROTATE_COUNTRIES.length]
 }
 
 // ─── CLI args ─────────────────────────────────────────────────────────────────
@@ -38,9 +52,12 @@ const isDryRun = args.includes('--dry-run')
 const limitArg = args.find(a => a.startsWith('--limit='))
 const limit = limitArg ? parseInt(limitArg.split('=')[1]) : 10
 const countryArg = args.find(a => a.startsWith('--country='))
-const country = countryArg
+const rawCountry = countryArg
   ? countryArg.split('=').slice(1).join('=').replace(/^["']|["']$/g, '')
   : DAY_TO_COUNTRY[new Date().getDay()] ?? 'United Kingdom'
+
+const country = rawCountry === 'rotate' ? getRotatingCountry() : rawCountry
+const isWorldwide = country === '__worldwide__'
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 const today = new Date()
@@ -78,13 +95,20 @@ async function tavilySearch(query) {
 }
 
 async function researchEvents(country) {
-  console.log(`\n🔍 Agent 1: Searching for SA events in ${country} (${year}–${nextYear})...`)
+  const label = isWorldwide ? 'worldwide' : country
+  console.log(`\n🔍 Agent 1: Searching for SA events — ${label} (${year}–${nextYear})...`)
 
-  const queries = [
-    `South African expat community event ${country} ${year}`,
-    `"South African" gathering braai festival market ${country} ${year}`,
-    `SA expat event reunion ${country} upcoming ${year}`,
-  ]
+  const queries = isWorldwide
+    ? [
+        `South African expat community event worldwide ${year}`,
+        `"South African" gathering braai festival overseas diaspora ${year}`,
+        `SA expat reunion event international ${year}`,
+      ]
+    : [
+        `South African expat community event ${country} ${year}`,
+        `"South African" gathering braai festival market ${country} ${year}`,
+        `SA expat event reunion ${country} upcoming ${year}`,
+      ]
 
   const allResults = []
   for (const query of queries) {

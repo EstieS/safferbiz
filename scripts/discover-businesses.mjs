@@ -29,7 +29,38 @@ const DAY_TO_COUNTRY = {
   4: 'United States',   // Thursday
   5: 'Netherlands',     // Friday
   6: 'New Zealand',     // Saturday
-  0: 'Canada',          // Sunday
+  0: 'rotate',          // Sunday → rotates through unlisted countries
+}
+
+// ─── Known countries already in the main schedule ────────────────────────────
+const MAIN_COUNTRIES = [
+  'South Africa', 'United Kingdom', 'Australia',
+  'United States', 'Netherlands', 'New Zealand', 'Canada',
+]
+
+// ─── All countries in the SafferBiz directory ────────────────────────────────
+const KNOWN_COUNTRIES = [
+  'Australia', 'Canada', 'China', 'Colombia', 'France', 'Germany',
+  'Greece', 'Hong Kong', 'India', 'Ireland', 'Israel', 'Italy',
+  'Luxembourg', 'Mauritius', 'Mexico', 'Netherlands', 'New Zealand',
+  'Poland', 'Portugal', 'Singapore', 'South Africa', 'South Korea',
+  'Spain', 'Thailand', 'United Arab Emirates', 'United Kingdom',
+  'United States',
+]
+
+// ─── Rotation list: known countries not in the main daily schedule ───────────
+// Every 21st week runs a broad worldwide search to catch unlisted countries
+const ROTATE_COUNTRIES = [
+  'China', 'Colombia', 'France', 'Germany', 'Greece', 'Hong Kong',
+  'India', 'Ireland', 'Israel', 'Italy', 'Luxembourg', 'Mauritius',
+  'Mexico', 'Poland', 'Portugal', 'Singapore', 'South Korea', 'Spain',
+  'Thailand', 'United Arab Emirates',
+  '__worldwide__', // broad sweep — catches countries not yet listed
+]
+
+function getRotatingCountry() {
+  const weekNumber = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000))
+  return ROTATE_COUNTRIES[weekNumber % ROTATE_COUNTRIES.length]
 }
 
 // ─── CLI args ─────────────────────────────────────────────────────────────────
@@ -38,9 +69,17 @@ const isDryRun = args.includes('--dry-run')
 const limitArg = args.find(a => a.startsWith('--limit='))
 const limit = limitArg ? parseInt(limitArg.split('=')[1]) : 10
 const countryArg = args.find(a => a.startsWith('--country='))
-const country = countryArg
+const rawCountry = countryArg
   ? countryArg.split('=').slice(1).join('=').replace(/^["']|["']$/g, '')
   : DAY_TO_COUNTRY[new Date().getDay()] ?? 'United Kingdom'
+
+const isWorldwide = rawCountry === 'rotate'
+  ? getRotatingCountry() === '__worldwide__'
+  : rawCountry === '__worldwide__'
+
+const country = rawCountry === 'rotate'
+  ? getRotatingCountry()
+  : rawCountry
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -72,13 +111,20 @@ async function tavilySearch(query) {
 }
 
 async function researchBusinesses(country) {
-  console.log(`\n🔍 Agent 1: Researching SA businesses in ${country}...`)
+  const label = isWorldwide ? 'worldwide (new countries)' : country
+  console.log(`\n🔍 Agent 1: Researching SA businesses — ${label}...`)
 
-  const queries = [
-    `South African owned business shop ${country}`,
-    `South African expat food grocery biltong boerewors ${country}`,
-    `"South African" shop café restaurant "${country}"`,
-  ]
+  const queries = isWorldwide
+    ? [
+        'South African expat owned business diaspora worldwide',
+        'South African community shop restaurant overseas expat',
+        '"South African" business expat abroad "proudly South African"',
+      ]
+    : [
+        `South African owned business shop ${country}`,
+        `South African expat food grocery biltong boerewors ${country}`,
+        `"South African" shop café restaurant "${country}"`,
+      ]
 
   const allResults = []
   for (const query of queries) {
@@ -113,12 +159,16 @@ async function extractBusinessData(searchResults, country) {
     .map(r => `Title: ${r.title}\nURL: ${r.url}\nSnippet: ${(r.content ?? '').slice(0, 300)}`)
     .join('\n\n---\n\n')
 
+  const locationInstruction = isWorldwide
+    ? `ANY country worldwide — include the country field in every result`
+    : `${country} only`
+
   const message = await anthropic.messages.create({
     model: 'claude-haiku-4-5',
     max_tokens: 1500,
     messages: [{
       role: 'user',
-      content: `Extract South African-owned or SA-expat-serving businesses from these web search results for ${country}.
+      content: `Extract South African-owned or SA-expat-serving businesses from these web search results. Location: ${locationInstruction}.
 
 RULES:
 - Only include businesses clearly South African-owned OR serving the SA expat/diaspora community
@@ -130,6 +180,7 @@ For each qualifying business return a JSON object:
   "business_name": "...",
   "website_url": "...",
   "description": "One sentence: what they sell or do",
+  "country": "...",
   "city": "...",
   "category": one of ["Food & Grocery","Restaurant & Takeaway","Beauty & Health","Home & Garden","Clothing & Fashion","Professional Services","Community & Events","Online Services","Other"]
 }
@@ -180,6 +231,16 @@ async function deduplicateBusinesses(candidates, country) {
     return !nameMatch && !urlMatch
   })
 
+  // Flag any businesses from countries not yet in SafferBiz
+  const newCountries = [...new Set(
+    newOnes
+      .map(b => b.country)
+      .filter(c => c && !KNOWN_COUNTRIES.includes(c))
+  )]
+  if (newCountries.length > 0) {
+    console.log(`   🌍 New countries found: ${newCountries.join(', ')}`)
+  }
+
   console.log(`   ${candidates.length - newOnes.length} already in DB — ${newOnes.length} new`)
   return newOnes
 }
@@ -209,12 +270,14 @@ async function createPendingRecords(businesses, country) {
   const records = []
   for (const biz of businesses) {
     const slug = await generateUniqueSlug(biz.business_name)
+    // In worldwide mode, use the country Claude extracted; otherwise use the scheduled country
+    const bizCountry = isWorldwide ? (biz.country || 'Other') : country
     records.push({
       slug,
       business_name: biz.business_name,
       description: biz.description || null,
       category: biz.category || 'Other',
-      country,
+      country: bizCountry,
       city: biz.city || null,
       website_url: biz.website_url || null,
       status: 'pending',
@@ -242,28 +305,48 @@ async function createPendingRecords(businesses, country) {
 async function sendNotificationEmail(newListings, country) {
   if (newListings.length === 0) return
 
-  const rows = newListings.map(l => `
+  // Find any businesses from countries not yet in SafferBiz
+  const newCountries = [...new Set(
+    newListings
+      .map(l => l.country)
+      .filter(c => c && !KNOWN_COUNTRIES.includes(c))
+  )]
+
+  const label = isWorldwide ? 'Worldwide sweep' : country
+
+  const rows = newListings.map(l => {
+    const isNewCountry = !KNOWN_COUNTRIES.includes(l.country)
+    return `
     <tr>
       <td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600">${l.business_name}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee">${l.country}${isNewCountry ? ' <span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600">NEW</span>' : ''}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #eee">${l.city || '—'}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #eee">${l.category}</td>
       <td style="padding:8px 12px;border-bottom:1px solid #eee">
         ${l.website_url ? `<a href="${l.website_url}" style="color:#007A4D">${l.website_url}</a>` : '—'}
       </td>
-    </tr>`).join('')
+    </tr>`}).join('')
+
+  const newCountryAlert = newCountries.length > 0 ? `
+    <div style="margin-bottom:16px;padding:12px 16px;background:#fef3c7;border:1px solid #f59e0b;border-radius:8px">
+      <p style="margin:0;font-weight:600;color:#92400e">🌍 New countries discovered: ${newCountries.join(', ')}</p>
+      <p style="margin:4px 0 0;font-size:13px;color:#92400e">These countries aren't in your directory yet. Reply to this email or ask Claude to add them!</p>
+    </div>` : ''
 
   const html = `
-    <div style="font-family:sans-serif;max-width:700px;margin:0 auto">
+    <div style="font-family:sans-serif;max-width:750px;margin:0 auto">
       <div style="background:#007A4D;padding:20px 24px;border-radius:8px 8px 0 0">
         <h1 style="color:white;margin:0;font-size:20px">🤖 SafferBiz Discovery Agent</h1>
-        <p style="color:#a7f3d0;margin:4px 0 0">Found ${newListings.length} new SA businesses in <strong style="color:white">${country}</strong></p>
+        <p style="color:#a7f3d0;margin:4px 0 0">Found ${newListings.length} new SA businesses — <strong style="color:white">${label}</strong></p>
       </div>
       <div style="background:#f9fafb;padding:20px 24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">
+        ${newCountryAlert}
         <p style="color:#374151;margin:0 0 16px">These listings have been added as <strong>pending</strong>. Please review and approve or reject each one.</p>
         <table style="width:100%;border-collapse:collapse;background:white;border-radius:6px;overflow:hidden;border:1px solid #e5e7eb">
           <thead>
             <tr style="background:#007A4D">
               <th style="padding:10px 12px;text-align:left;color:white;font-size:13px">Business</th>
+              <th style="padding:10px 12px;text-align:left;color:white;font-size:13px">Country</th>
               <th style="padding:10px 12px;text-align:left;color:white;font-size:13px">City</th>
               <th style="padding:10px 12px;text-align:left;color:white;font-size:13px">Category</th>
               <th style="padding:10px 12px;text-align:left;color:white;font-size:13px">Website</th>
@@ -289,7 +372,7 @@ async function sendNotificationEmail(newListings, country) {
     body: JSON.stringify({
       personalizations: [{ to: [{ email: 'safferbiz@gmail.com' }] }],
       from: { email: process.env.SENDGRID_FROM_EMAIL, name: 'SafferBiz Agent' },
-      subject: `🤖 ${newListings.length} new SA businesses found in ${country}`,
+      subject: `🤖 ${newListings.length} new SA businesses found — ${label}`,
       content: [{ type: 'text/html', value: html }],
     }),
   })
@@ -303,8 +386,12 @@ async function sendNotificationEmail(newListings, country) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
+  const label = isWorldwide ? '🌍 Worldwide sweep (new countries)' : country
   console.log('\n🇿🇦 SafferBiz Business Discovery Agent')
-  console.log(`📍 Country : ${country}`)
+  console.log(`📍 Country : ${label}`)
+  if (!isWorldwide && country === '__worldwide__' || country === 'rotate') {
+    console.log(`   (Week rotation index: ${Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) % ROTATE_COUNTRIES.length})`)
+  }
   console.log(`🔢 Limit   : ${limit}`)
   console.log(`🧪 Dry run : ${isDryRun}`)
   console.log('─'.repeat(45))

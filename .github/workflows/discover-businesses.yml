@@ -60,7 +60,7 @@ jobs:
               4) COUNTRY="United States" ;;
               5) COUNTRY="Netherlands" ;;
               6) COUNTRY="New Zealand" ;;
-              7) COUNTRY="Canada" ;;
+              7) COUNTRY="rotate" ;;
               *) COUNTRY="United Kingdom" ;;
             esac
             echo "country=$COUNTRY" >> $GITHUB_OUTPUT
