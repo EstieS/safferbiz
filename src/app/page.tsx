@@ -47,12 +47,12 @@ export default async function HomePage() {
             Built by Saffers, for Saffers living abroad
           </p>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            Find South African Businesses<br />
+            Find SA Businesses & Events<br />
             <span style={{ color: '#FFB612' }}>Wherever You Are</span>
           </h1>
           <p className="text-green-100 text-lg mb-6 max-w-2xl mx-auto">
-            The directory for SA expats. Find biltong, boerewors, gifts from home,
-            and South African-owned businesses around the world.
+            The directory for SA expats. Discover South African-owned businesses,
+            community events, and a taste of home — wherever in the world you are.
           </p>
 
           {/* Live stats */}

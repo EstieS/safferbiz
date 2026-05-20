@@ -228,6 +228,46 @@ export async function sendSubscriptionConfirmation(subscriber: {
   })
 }
 
+// Notify event organiser when their event is approved
+export async function sendEventApprovedEmail(event: {
+  title: string
+  slug: string
+  email: string
+}) {
+  const eventUrl = `${SITE}/events/${event.slug}`
+
+  await sgMail.send({
+    to: event.email,
+    from: { email: FROM, name: 'SafferBiz' },
+    subject: `Your event is live on SafferBiz! 🎉`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #007A4D; padding: 24px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Saffer<span style="color: #FFB612;">Biz</span></h1>
+        </div>
+        <div style="padding: 32px 24px;">
+          <p style="color: #555; margin-top: 0;">Great news!</p>
+          <p style="color: #555;">Your event <strong>${event.title}</strong> has been approved and is now live on SafferBiz. SA expats in your area can now find it!</p>
+
+          <a href="${eventUrl}" style="display: inline-block; background: #DE3831; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 16px 0;">
+            View Your Event →
+          </a>
+
+          <p style="color: #555; margin-top: 24px;">A few ways to spread the word:</p>
+          <ul style="color: #555; font-size: 14px; line-height: 1.8;">
+            <li>Share the event link with your community</li>
+            <li>Post it on your social media pages</li>
+            <li>If any details need updating, just reply to this email</li>
+          </ul>
+
+          <p style="color: #555;">Thank you for keeping the SA expat community connected!</p>
+          <p style="color: #555;">Cheers,<br/>Estie<br/>SafferBiz</p>
+        </div>
+      </div>
+    `,
+  })
+}
+
 // Monthly stats email to a business — views and clicks
 export async function sendListingStatsEmail(listing: {
   business_name: string

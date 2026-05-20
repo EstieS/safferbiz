@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server'
-import { sendNewEventAlert } from '@/lib/sendgrid'
+import { sendNewEventAlert, sendEventApprovedEmail } from '@/lib/sendgrid'
 import { generateEventPost } from '@/lib/social-posts'
 
 async function requireAdmin() {
@@ -27,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       // Fetch the full event
       const { data: event } = await admin
         .from('events')
-        .select('title, slug, category, city, country, event_date, event_end_date, description, venue, url')
+        .select('title, slug, category, city, country, event_date, event_end_date, description, venue, url, organizer_email')
         .eq('id', id)
         .single()
 
@@ -44,6 +44,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
         if (matched.length > 0) {
           await sendNewEventAlert({ subscribers: matched, event })
+        }
+
+        // Email the organiser to confirm their event is live
+        if (event.organizer_email) {
+          sendEventApprovedEmail({
+            title: event.title,
+            slug: event.slug,
+            email: event.organizer_email,
+          }).catch(err => console.error('Failed to send event approval email:', err))
         }
 
         // Generate social post draft for every approved event

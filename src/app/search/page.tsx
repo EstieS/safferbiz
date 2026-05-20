@@ -2,12 +2,13 @@ import type { Metadata } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import ListingCard from '@/components/ListingCard'
 import SearchBar from '@/components/SearchBar'
-import { PRODUCT_TAGS, COUNTRIES } from '@/lib/constants'
+import SearchFilters from '@/components/SearchFilters'
+import { PRODUCT_TAGS, COUNTRIES, CATEGORIES } from '@/lib/constants'
 import type { Listing } from '@/lib/types'
 import Link from 'next/link'
 
 interface Props {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; country?: string; category?: string }>
 }
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
@@ -18,34 +19,32 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 }
 
 // ─── Smart query parser ───────────────────────────────────────────────────────
-// Understands "biltong in USA", "boerewors near London", "SA food Australia"
 
 const COUNTRY_ALIASES: Record<string, string> = {
-  'usa':        'United States',
-  'us':         'United States',
-  'america':    'United States',
-  'uk':         'United Kingdom',
-  'britain':    'United Kingdom',
-  'england':    'United Kingdom',
-  'scotland':   'United Kingdom',
-  'wales':      'United Kingdom',
-  'nz':         'New Zealand',
-  'au':         'Australia',
-  'aus':        'Australia',
-  'sa':         'South Africa',
-  'rsa':        'South Africa',
-  'uae':        'United Arab Emirates',
-  'emirates':   'United Arab Emirates',
-  'holland':    'Netherlands',
-  'deutschland':'Germany',
-  'eire':       'Ireland',
-  'singapore':  'Singapore',
+  'usa':         'United States',
+  'us':          'United States',
+  'america':     'United States',
+  'uk':          'United Kingdom',
+  'britain':     'United Kingdom',
+  'england':     'United Kingdom',
+  'scotland':    'United Kingdom',
+  'wales':       'United Kingdom',
+  'nz':          'New Zealand',
+  'au':          'Australia',
+  'aus':         'Australia',
+  'sa':          'South Africa',
+  'rsa':         'South Africa',
+  'uae':         'United Arab Emirates',
+  'emirates':    'United Arab Emirates',
+  'holland':     'Netherlands',
+  'deutschland': 'Germany',
+  'eire':        'Ireland',
+  'singapore':   'Singapore',
 }
 
 const STOP_WORDS = new Set(['in', 'near', 'from', 'at', 'around', 'the'])
 
 function parseQuery(raw: string): { terms: string; country: string | null } {
-  // First check for multi-word country names (e.g. "New Zealand", "United States")
   let remaining = raw
   let country: string | null = null
 
@@ -58,7 +57,6 @@ function parseQuery(raw: string): { terms: string; country: string | null } {
     }
   }
 
-  // Tokenise what's left and check for aliases + stop words
   const tokens = remaining.trim().split(/\s+/).filter(Boolean)
   const searchTokens: string[] = []
 
@@ -72,82 +70,76 @@ function parseQuery(raw: string): { terms: string; country: string | null } {
     searchTokens.push(token)
   }
 
-  return {
-    terms: searchTokens.join(' ').trim(),
-    country,
-  }
+  return { terms: searchTokens.join(' ').trim(), country }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default async function SearchPage({ searchParams }: Props) {
-  const { q } = await searchParams
+  const { q, country: countryFilter, category: categoryFilter } = await searchParams
   const query = q?.trim() ?? ''
 
+  const supabase = await createServerSupabaseClient()
+
   let listings: Listing[] = []
-  let parsedTerms = query
-  let parsedCountry: string | null = null
   let totalCount = 0
+  let parsedTerms = ''
+  let parsedCountry: string | null = null
 
   if (!query) {
-    // No query — show all listings A→Z
-    const supabase = await createServerSupabaseClient()
-    const { data, count } = await supabase
+    // No text — show all, applying dropdown filters only
+    // Build with count by not using the base() helper (which already calls select)
+    let listQb = supabase
       .from('listings')
       .select('*', { count: 'exact' })
       .eq('status', 'active')
       .order('business_name', { ascending: true })
-      .limit(100)
+      .limit(200)
+    if (countryFilter) listQb = listQb.eq('country', countryFilter)
+    if (categoryFilter) listQb = listQb.eq('category', categoryFilter)
+
+    const { data, count } = await listQb
     listings = (data ?? []) as Listing[]
-    totalCount = count ?? 0
-  }
-
-  if (query) {
-    const supabase = await createServerSupabaseClient()
-    const { terms, country } = parseQuery(query)
+    totalCount = count ?? listings.length
+  } else {
+    const { terms, country: smartCountry } = parseQuery(query)
     parsedTerms = terms
-    parsedCountry = country
+    // Dropdown country takes precedence over smart-parsed country
+    parsedCountry = countryFilter ? null : smartCountry
+    const effectiveCountry = countryFilter ?? smartCountry
+    const searchText = terms || query
 
-    const searchText = terms || query // fall back to full query if terms is empty
-
-    // Helper to build the base query with optional country filter
-    function base() {
-      let q = supabase.from('listings').select('*').eq('status', 'active')
-      if (country) q = q.eq('country', country)
-      return q
+    function searchBase() {
+      let qb = supabase.from('listings').select('*').eq('status', 'active')
+      if (effectiveCountry) qb = qb.eq('country', effectiveCountry)
+      if (categoryFilter) qb = qb.eq('category', categoryFilter)
+      return qb
     }
 
-    const tagVariants = searchText
-      ? [
-          searchText,
-          searchText.charAt(0).toUpperCase() + searchText.slice(1).toLowerCase(),
-        ]
-      : []
+    const tagVariants = [
+      searchText,
+      searchText.charAt(0).toUpperCase() + searchText.slice(1).toLowerCase(),
+    ]
 
     const [textRes, ...tagResults] = await Promise.all([
-      // Text search across name, description, city
-      base().or(
+      searchBase().or(
         `business_name.ilike.%${searchText}%,description.ilike.%${searchText}%,city.ilike.%${searchText}%`
       ),
-      // Tag searches
-      ...tagVariants.map((v) => base().contains('tags', [v])),
+      ...tagVariants.map((v) => searchBase().contains('tags', [v])),
     ])
 
-    // If country-only search (no terms), also fetch all businesses in that country
+    // Country-only: fetch all businesses in that country when no text terms
     const countryOnlyResults =
-      country && !terms
-        ? await base().order('business_name')
+      effectiveCountry && !terms
+        ? await searchBase().order('business_name')
         : null
 
-    // Merge and deduplicate
     const seen = new Set<string>()
     const merged: Listing[] = []
-    const allResults = [
+    for (const item of [
       ...(textRes.data ?? []),
       ...tagResults.flatMap((r) => r.data ?? []),
       ...(countryOnlyResults?.data ?? []),
-    ] as Listing[]
-
-    for (const item of allResults) {
+    ] as Listing[]) {
       if (!seen.has(item.id)) {
         seen.add(item.id)
         merged.push(item)
@@ -155,99 +147,107 @@ export default async function SearchPage({ searchParams }: Props) {
     }
 
     listings = merged.sort((a, b) => a.business_name.localeCompare(b.business_name))
+    totalCount = listings.length
   }
 
-  // Build a human-readable description of what was searched
-  const searchDescription = parsedCountry && parsedTerms
-    ? `"${parsedTerms}" in ${parsedCountry}`
-    : parsedCountry
-    ? `businesses in ${parsedCountry}`
-    : `"${query}"`
+  // Human-readable result header
+  const effectiveCountry = countryFilter ?? parsedCountry
+  const searchDescription =
+    effectiveCountry && parsedTerms
+      ? `"${parsedTerms}" in ${effectiveCountry}`
+      : effectiveCountry
+      ? `businesses in ${effectiveCountry}`
+      : query
+      ? `"${query}"`
+      : null
+
+  const hasFilters = !!(countryFilter || categoryFilter)
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
-      <div className="mb-8">
-        <SearchBar />
+
+      {/* Search bar — light variant, pre-filled with current query */}
+      <div className="mb-5">
+        <SearchBar variant="light" defaultValue={query} />
       </div>
 
-      {!query && (
-        <div>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              All Businesses
-              <span className="ml-2 text-base font-normal text-gray-400">({totalCount})</span>
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-            {listings.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
-            ))}
-          </div>
-          {totalCount > 100 && (
-            <p className="text-center text-sm text-gray-400">
-              Showing first 100 results. Use the search bar to find specific businesses.
-            </p>
-          )}
-          <div className="border-t border-gray-100 pt-8">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-              Browse by Product
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {PRODUCT_TAGS.map((tag) => (
-                <Link
-                  key={tag}
-                  href={`/tag/${encodeURIComponent(tag)}`}
-                  className="px-4 py-2 rounded-full text-sm font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
-                >
-                  {tag}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Country + Category filter dropdowns */}
+      <SearchFilters
+        countries={[...COUNTRIES]}
+        categories={[...CATEGORIES]}
+        selectedCountry={countryFilter ?? ''}
+        selectedCategory={categoryFilter ?? ''}
+        currentQuery={query}
+      />
 
-      {query && (
-        <>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
-            Results for {searchDescription}
+      {/* Results header */}
+      <div className="flex justify-between items-center mb-6 mt-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {searchDescription ? `Results for ${searchDescription}` : 'All Businesses'}
+            <span className="ml-2 text-base font-normal text-gray-400">({totalCount})</span>
           </h1>
-          {/* Show how query was interpreted if it was parsed */}
-          {(parsedCountry || parsedTerms !== query) && (
-            <p className="text-sm text-gray-400 mb-2">
+          {/* Show smart-parse interpretation hint */}
+          {query && !countryFilter && parsedCountry && (
+            <p className="text-sm text-gray-400 mt-0.5">
               {parsedTerms && <span>Searching <strong>{parsedTerms}</strong></span>}
               {parsedTerms && parsedCountry && <span> · </span>}
               {parsedCountry && <span>Country: <strong>{parsedCountry}</strong></span>}
             </p>
           )}
-          <p className="text-gray-500 mb-8">
-            {listings.length} {listings.length === 1 ? 'result' : 'results'} found
-          </p>
+        </div>
+        {(query || hasFilters) && (
+          <Link href="/search" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            Clear all ×
+          </Link>
+        )}
+      </div>
 
-          {listings.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-400 mb-4">No businesses found matching {searchDescription}.</p>
-              <p className="text-sm text-gray-400">Try browsing by product:</p>
-              <div className="flex flex-wrap gap-2 justify-center mt-3">
-                {PRODUCT_TAGS.slice(0, 8).map((tag) => (
-                  <Link
-                    key={tag}
-                    href={`/tag/${encodeURIComponent(tag)}`}
-                    className="px-3 py-1 rounded-full text-sm bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
-                  >
-                    {tag}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {listings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
-          )}
-        </>
+      {/* Listings grid */}
+      {listings.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-400 mb-4">
+            No businesses found{searchDescription ? ` matching ${searchDescription}` : ''}.
+          </p>
+          <p className="text-sm text-gray-400">Try browsing by product:</p>
+          <div className="flex flex-wrap gap-2 justify-center mt-3">
+            {PRODUCT_TAGS.slice(0, 8).map((tag) => (
+              <Link
+                key={tag}
+                href={`/tag/${encodeURIComponent(tag)}`}
+                className="px-3 py-1 rounded-full text-sm bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+              >
+                {tag}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {listings.map((listing) => (
+            <ListingCard key={listing.id} listing={listing} />
+          ))}
+        </div>
+      )}
+
+      {/* Product tags — only when browsing with no active search or filters */}
+      {!query && !hasFilters && (
+        <div className="border-t border-gray-100 pt-8 mt-10">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+            Browse by Product
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {PRODUCT_TAGS.map((tag) => (
+              <Link
+                key={tag}
+                href={`/tag/${encodeURIComponent(tag)}`}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+              >
+                {tag}
+              </Link>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
