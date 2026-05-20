@@ -88,7 +88,7 @@ export default async function HomePage() {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Recently Added</h2>
             <Link href="/search" className="text-sm font-medium hover:underline" style={{ color: '#007A4D' }}>
-              View all →
+              Browse all businesses →
             </Link>
           </div>
 

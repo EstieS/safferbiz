@@ -86,6 +86,20 @@ export default async function SearchPage({ searchParams }: Props) {
   let listings: Listing[] = []
   let parsedTerms = query
   let parsedCountry: string | null = null
+  let totalCount = 0
+
+  if (!query) {
+    // No query — show all listings A→Z
+    const supabase = await createServerSupabaseClient()
+    const { data, count } = await supabase
+      .from('listings')
+      .select('*', { count: 'exact' })
+      .eq('status', 'active')
+      .order('business_name', { ascending: true })
+      .limit(100)
+    listings = (data ?? []) as Listing[]
+    totalCount = count ?? 0
+  }
 
   if (query) {
     const supabase = await createServerSupabaseClient()
@@ -158,19 +172,37 @@ export default async function SearchPage({ searchParams }: Props) {
 
       {!query && (
         <div>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-            Browse by Product
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {PRODUCT_TAGS.map((tag) => (
-              <Link
-                key={tag}
-                href={`/tag/${encodeURIComponent(tag)}`}
-                className="px-4 py-2 rounded-full text-sm font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
-              >
-                {tag}
-              </Link>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              All Businesses
+              <span className="ml-2 text-base font-normal text-gray-400">({totalCount})</span>
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            {listings.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
             ))}
+          </div>
+          {totalCount > 100 && (
+            <p className="text-center text-sm text-gray-400">
+              Showing first 100 results. Use the search bar to find specific businesses.
+            </p>
+          )}
+          <div className="border-t border-gray-100 pt-8">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+              Browse by Product
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {PRODUCT_TAGS.map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/tag/${encodeURIComponent(tag)}`}
+                  className="px-4 py-2 rounded-full text-sm font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+                >
+                  {tag}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       )}
