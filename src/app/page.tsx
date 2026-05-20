@@ -52,7 +52,7 @@ export default async function HomePage() {
           </h1>
           <p className="text-green-100 text-lg mb-6 max-w-2xl mx-auto">
             The directory for SA expats. Discover South African-owned businesses,
-            community events, and a taste of home — wherever in the world you are.
+            community events, and a taste of home - wherever in the world you are.
           </p>
 
           {/* Live stats */}
