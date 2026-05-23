@@ -106,8 +106,15 @@ export default function ListingCard({ listing }: Props) {
               </span>
             )}
           </div>
-          <span className="text-xs text-gray-400 group-hover:text-green-600 transition-colors">
-            View →
+          <span className="flex items-center gap-2 text-xs text-gray-400">
+            {(listing.view_count ?? 0) > 0 && (
+              <span title="Total views">
+                👁 {(listing.view_count ?? 0) >= 1000
+                  ? `${((listing.view_count ?? 0) / 1000).toFixed(1)}k`
+                  : listing.view_count}
+              </span>
+            )}
+            <span className="group-hover:text-green-600 transition-colors">View →</span>
           </span>
         </div>
       </div>
