@@ -8,6 +8,10 @@ interface Props {
   selectedCountry: string
   selectedCategory: string
   currentQuery: string
+  /** Set to false to hide the category dropdown (e.g. on tag pages) */
+  showCategory?: boolean
+  /** Base path to push to on filter change. Defaults to /search */
+  basePath?: string
 }
 
 export default function SearchFilters({
@@ -16,6 +20,8 @@ export default function SearchFilters({
   selectedCountry,
   selectedCategory,
   currentQuery,
+  showCategory = true,
+  basePath = '/search',
 }: Props) {
   const router = useRouter()
 
@@ -24,7 +30,7 @@ export default function SearchFilters({
     if (currentQuery) params.set('q', currentQuery)
     if (country) params.set('country', country)
     if (category) params.set('category', category)
-    router.push(`/search?${params.toString()}`)
+    router.push(`${basePath}?${params.toString()}`)
   }
 
   return (
@@ -45,19 +51,21 @@ export default function SearchFilters({
       </div>
 
       {/* Category filter */}
-      <div className="flex items-center gap-2">
-        <label className="text-sm font-medium text-gray-500 whitespace-nowrap">Category</label>
-        <select
-          value={selectedCategory}
-          onChange={(e) => update(selectedCountry, e.target.value)}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 cursor-pointer"
-        >
-          <option value="">All categories</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-      </div>
+      {showCategory && (
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-gray-500 whitespace-nowrap">Category</label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => update(selectedCountry, e.target.value)}
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600 cursor-pointer"
+          >
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Active filter chips */}
       {(selectedCountry || selectedCategory) && (
