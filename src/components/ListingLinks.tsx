@@ -12,6 +12,12 @@ function trackClick(slug: string) {
   fetch(`/api/listings/${slug}/click`, { method: 'POST', keepalive: true }).catch(() => {})
 }
 
+/** Ensures a URL has a protocol so it opens as an external link, not a relative path */
+function ensureHttps(url: string): string {
+  if (!url) return url
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`
+}
+
 export default function ListingLinks({ slug, website_url, email, facebook_url, instagram_url }: Props) {
   return (
     <div className="border-t border-gray-100 pt-6 space-y-3">
@@ -21,7 +27,7 @@ export default function ListingLinks({ slug, website_url, email, facebook_url, i
 
       {website_url && (
         <a
-          href={website_url}
+          href={ensureHttps(website_url)}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => trackClick(slug)}
@@ -41,7 +47,7 @@ export default function ListingLinks({ slug, website_url, email, facebook_url, i
       )}
       {facebook_url && (
         <a
-          href={facebook_url}
+          href={ensureHttps(facebook_url)}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => trackClick(slug)}
@@ -52,7 +58,7 @@ export default function ListingLinks({ slug, website_url, email, facebook_url, i
       )}
       {instagram_url && (
         <a
-          href={instagram_url}
+          href={ensureHttps(instagram_url)}
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => trackClick(slug)}
