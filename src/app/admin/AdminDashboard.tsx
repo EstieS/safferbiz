@@ -177,6 +177,9 @@ function ListingEditor({ listing, onSave }: { listing: Listing; onSave: (data: P
 function EventEditor({ event, onSave }: { event: Event; onSave: (data: Partial<Event>) => void }) {
   const [fields, setFields] = useState({
     title: event.title ?? '',
+    event_date: event.event_date ?? '',
+    event_end_date: event.event_end_date ?? '',
+    event_time: event.event_time ?? '',
     description: event.description ?? '',
     venue: event.venue ?? '',
     city: event.city ?? '',
@@ -201,6 +204,21 @@ function EventEditor({ event, onSave }: { event: Event; onSave: (data: Partial<E
         <div>
           <label className="text-xs text-gray-400">City</label>
           <input value={fields.city} onChange={e => set('city', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-red-500">Start Date ★</label>
+          <input type="date" value={fields.event_date} onChange={e => set('event_date', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-red-300 rounded mt-0.5 bg-red-50" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">End Date (optional)</label>
+          <input type="date" value={fields.event_end_date} onChange={e => set('event_end_date', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">Time (optional)</label>
+          <input type="time" value={fields.event_time} onChange={e => set('event_time', e.target.value)}
             className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" />
         </div>
         <div>
