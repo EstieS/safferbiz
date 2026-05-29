@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 
-const APP_STORE_URL = 'https://apps.apple.com/app/safferbiz/id6740897903'
+const APP_STORE_URL = 'https://apps.apple.com/us/app/safferbiz/id6746512857'
 
 interface Props {
   /** ISO string — used as a cache-buster for localStorage so each activation is fresh */
@@ -31,8 +31,8 @@ export default function AppBanner({ expiresAt }: Props) {
 
   return (
     <div
-      className="w-full flex items-center justify-center gap-3 px-4 py-2.5 text-sm font-medium text-white"
-      style={{ backgroundColor: '#007A4D' }}
+      className="w-full flex items-center justify-center gap-3 px-4 py-2.5 text-sm font-medium"
+      style={{ backgroundColor: '#FFB612', color: '#1a1a1a' }}
     >
       <span className="text-base">📱</span>
       <span>
@@ -50,7 +50,8 @@ export default function AppBanner({ expiresAt }: Props) {
       <button
         onClick={dismiss}
         aria-label="Dismiss banner"
-        className="flex-shrink-0 ml-1 text-white/70 hover:text-white transition-colors text-lg leading-none"
+        className="flex-shrink-0 ml-1 hover:opacity-60 transition-opacity text-lg leading-none"
+        style={{ color: '#1a1a1a' }}
       >
         ×
       </button>
