@@ -4,6 +4,7 @@ import './globals.css'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import FeedbackWidget from '@/components/FeedbackWidget'
+import AppBannerServer from '@/components/AppBannerServer'
 import { Analytics } from '@vercel/analytics/next'
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist' })
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geist.variable} h-full`}>
       <body className="min-h-full flex flex-col antialiased bg-gray-50 text-gray-900">
+        <AppBannerServer />
         <Navbar />
         <main className="flex-1">{children}</main>
         <Footer />

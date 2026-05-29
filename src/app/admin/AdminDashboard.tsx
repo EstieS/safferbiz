@@ -1,8 +1,71 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Listing, ListingStatus, Event, EventStatus } from '@/lib/types'
 import { PRODUCT_TAGS, CATEGORIES, COUNTRIES } from '@/lib/constants'
+
+// ─── App Banner Control ───────────────────────────────────────────────────────
+
+function BannerControl() {
+  const [active, setActive] = useState(false)
+  const [expiresAt, setExpiresAt] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/admin/banner')
+      .then(r => r.json())
+      .then(d => { setActive(d.active); setExpiresAt(d.expires_at); setLoading(false) })
+  }, [])
+
+  async function toggle(on: boolean) {
+    setSaving(true)
+    const res = await fetch('/api/admin/banner', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active: on, hours: 24 }),
+    })
+    const d = await res.json()
+    setActive(d.active)
+    setExpiresAt(d.expires_at)
+    setSaving(false)
+  }
+
+  if (loading) return null
+
+  const expiry = expiresAt ? new Date(expiresAt) : null
+  const timeLeft = expiry && active
+    ? (() => {
+        const h = Math.ceil((expiry.getTime() - Date.now()) / 3600000)
+        return h > 0 ? `${h}h left` : 'expired'
+      })()
+    : null
+
+  return (
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${active ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+      <span className="text-lg">📱</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-700">App Store Banner</p>
+        <p className="text-xs text-gray-400">
+          {active
+            ? `Live sitewide${timeLeft ? ` — ${timeLeft}` : ''} — auto-hides after 24h`
+            : 'Off — click to show banner to all visitors for 24h'}
+        </p>
+      </div>
+      <button
+        onClick={() => toggle(!active)}
+        disabled={saving}
+        className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-colors disabled:opacity-50 ${
+          active
+            ? 'bg-red-100 text-red-700 hover:bg-red-200'
+            : 'bg-green-600 text-white hover:bg-green-700'
+        }`}
+      >
+        {saving ? '...' : active ? 'Turn Off' : 'Go Live'}
+      </button>
+    </div>
+  )
+}
 
 const STATUS_COLORS: Record<ListingStatus, string> = {
   active: 'bg-green-100 text-green-700',
@@ -443,11 +506,15 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
         <form action="/api/auth/signout" method="post">
           <button className="text-sm text-gray-500 hover:text-red-600">Sign out</button>
         </form>
+      </div>
+
+      <div className="mb-8">
+        <BannerControl />
       </div>
 
       {/* Tab switcher */}
