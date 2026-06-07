@@ -233,6 +233,7 @@ export async function sendEventApprovedEmail(event: {
   title: string
   slug: string
   email: string
+  manageUrl?: string
 }) {
   const eventUrl = `${SITE}/events/${event.slug}`
 
@@ -253,11 +254,20 @@ export async function sendEventApprovedEmail(event: {
             View Your Event →
           </a>
 
+          ${event.manageUrl ? `
+          <div style="background: #f9f9f9; border-left: 4px solid #007A4D; padding: 16px 20px; border-radius: 4px; margin: 20px 0;">
+            <p style="margin: 0 0 8px; color: #555; font-size: 14px;">Need to fix the date, venue or any other details? You can update them yourself anytime:</p>
+            <a href="${event.manageUrl}" style="color: #007A4D; font-weight: bold; font-size: 14px;">Manage your event →</a>
+            <p style="margin: 8px 0 0; color: #999; font-size: 12px;">Keep this link private — anyone with it can edit your event.</p>
+          </div>
+          ` : `
+          <p style="color: #555; margin-top: 24px;">If any details need updating, just reply to this email.</p>
+          `}
+
           <p style="color: #555; margin-top: 24px;">A few ways to spread the word:</p>
           <ul style="color: #555; font-size: 14px; line-height: 1.8;">
             <li>Share the event link with your community</li>
             <li>Post it on your social media pages</li>
-            <li>If any details need updating, just reply to this email</li>
           </ul>
 
           <p style="color: #555;">Thank you for keeping the SA expat community connected!</p>

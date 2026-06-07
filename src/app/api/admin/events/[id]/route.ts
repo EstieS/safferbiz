@@ -3,6 +3,8 @@ import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-se
 import { sendNewEventAlert, sendEventApprovedEmail } from '@/lib/sendgrid'
 import { generateEventPost } from '@/lib/social-posts'
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://safferbiz.com'
+
 async function requireAdmin() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -46,12 +48,30 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           await sendNewEventAlert({ subscribers: matched, event })
         }
 
-        // Email the organiser to confirm their event is live
+        // Email the organiser to confirm their event is live, with a private
+        // link to manage their own event details (date, venue, etc.)
         if (event.organizer_email) {
+          let manageUrl: string | undefined
+          try {
+            const manageToken = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, '')
+            // Valid until ~2 weeks after the event, or 30 days out — whichever is later
+            const eventTime = event.event_date ? new Date(event.event_date).getTime() : Date.now()
+            const expires = new Date(
+              Math.max(Date.now() + 30 * 86400000, eventTime + 14 * 86400000)
+            ).toISOString()
+            const { error: tokenErr } = await admin
+              .from('event_manage_tokens')
+              .upsert({ event_id: id, token: manageToken, expires_at: expires }, { onConflict: 'event_id' })
+            if (!tokenErr) manageUrl = `${SITE}/manage/event/${event.slug}?token=${manageToken}`
+          } catch (tokenErr) {
+            console.error('Failed to mint event manage token:', tokenErr)
+          }
+
           sendEventApprovedEmail({
             title: event.title,
             slug: event.slug,
             email: event.organizer_email,
+            manageUrl,
           }).catch(err => console.error('Failed to send event approval email:', err))
         }
 
