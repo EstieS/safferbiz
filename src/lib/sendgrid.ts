@@ -268,6 +268,83 @@ export async function sendEventApprovedEmail(event: {
   })
 }
 
+// Notify admin when a business owner submits a claim for review
+export async function sendClaimSubmittedNotification(params: {
+  business_name: string
+  slug: string
+  claimant_name: string
+  claimant_email: string
+  message: string | null
+}) {
+  const { business_name, slug, claimant_name, claimant_email, message } = params
+
+  await sgMail.send({
+    to: ADMIN_EMAIL,
+    from: { email: FROM, name: 'SafferBiz' },
+    subject: `🙋 Claim submitted: ${business_name}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #1D9BF0; padding: 24px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Saffer<span style="color: #FFB612;">Biz</span></h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px;">Listing claim awaiting review</p>
+        </div>
+        <div style="padding: 32px 24px;">
+          <p style="color: #555; margin-top: 0;">Someone says they own a listed business and wants to claim it.</p>
+
+          <div style="background: #f0f8ff; border-left: 4px solid #1D9BF0; padding: 20px; border-radius: 4px; margin: 24px 0;">
+            <h2 style="margin: 0 0 8px; color: #111;">${business_name}</h2>
+            <p style="margin: 0 0 4px; color: #555; font-size: 14px;">👤 ${claimant_name}</p>
+            <p style="margin: 0 0 4px; color: #555; font-size: 14px;">✉️ ${claimant_email}</p>
+            <p style="margin: 0 0 4px; color: #555; font-size: 14px;">🔗 ${SITE}/listings/${slug}</p>
+            ${message ? `<p style="margin: 12px 0 0; color: #555; font-size: 14px; font-style: italic;">“${message}”</p>` : ''}
+          </div>
+
+          <a href="${SITE}/admin" style="display: inline-block; background: #1D9BF0; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+            Review in Admin →
+          </a>
+          <p style="margin-top: 16px; font-size: 13px; color: #999;">Approving verifies the listing and emails the owner an edit link.</p>
+        </div>
+      </div>
+    `,
+  })
+}
+
+// Notify the owner that their claim was approved — includes a private edit link
+export async function sendClaimApprovedEmail(params: {
+  business_name: string
+  email: string
+  manageUrl: string
+}) {
+  const { business_name, email, manageUrl } = params
+
+  await sgMail.send({
+    to: email,
+    from: { email: FROM, name: 'SafferBiz' },
+    subject: `You're verified! Manage ${business_name} on SafferBiz ✓`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #007A4D; padding: 24px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px;">Saffer<span style="color: #FFB612;">Biz</span></h1>
+        </div>
+        <div style="padding: 32px 24px;">
+          <p style="color: #555; margin-top: 0;">Great news!</p>
+          <p style="color: #555;">Your claim for <strong>${business_name}</strong> has been approved. Your listing now shows a blue <strong>✓ Verified</strong> badge, which helps SA expats trust it.</p>
+
+          <p style="color: #555;">You can now keep your details up to date yourself using your private management link below:</p>
+
+          <a href="${manageUrl}" style="display: inline-block; background: #007A4D; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 16px 0;">
+            Manage Your Listing →
+          </a>
+
+          <p style="color: #999; font-size: 13px;">Keep this link private — anyone with it can edit your listing. It's valid for 30 days; reply to this email if you need a fresh one.</p>
+
+          <p style="color: #555; margin-top: 24px;">Cheers,<br/>Estie<br/>SafferBiz</p>
+        </div>
+      </div>
+    `,
+  })
+}
+
 // Monthly stats email to a business — views and clicks
 export async function sendListingStatsEmail(listing: {
   business_name: string

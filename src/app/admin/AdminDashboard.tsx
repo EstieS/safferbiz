@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Listing, ListingStatus, Event, EventStatus } from '@/lib/types'
+import type { Listing, ListingStatus, Event, EventStatus, ListingClaim } from '@/lib/types'
 import { PRODUCT_TAGS, CATEGORIES, COUNTRIES } from '@/lib/constants'
 
 // ─── App Banner Control ───────────────────────────────────────────────────────
@@ -438,8 +438,99 @@ function EventsPanel({ events: initialEvents }: { events: Event[] }) {
   )
 }
 
-export default function AdminDashboard({ listings: initial, events: initialEvents }: { listings: Listing[], events: Event[] }) {
-  const [tab, setTab] = useState<'listings' | 'events'>('listings')
+function ClaimsPanel({ claims: initialClaims }: { claims: ListingClaim[] }) {
+  const [claims, setClaims] = useState(initialClaims)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [filter, setFilter] = useState<'pending' | 'all'>('pending')
+
+  const filtered = filter === 'pending' ? claims.filter((c) => c.status === 'pending') : claims
+  const pendingCount = claims.filter((c) => c.status === 'pending').length
+
+  async function review(id: string, action: 'approve' | 'reject') {
+    setBusy(id)
+    const res = await fetch(`/api/admin/claims/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    })
+    if (res.ok) {
+      setClaims((prev) => prev.map((c) =>
+        c.id === id ? { ...c, status: action === 'approve' ? 'approved' : 'rejected', reviewed_at: new Date().toISOString() } : c
+      ))
+    } else {
+      const j = await res.json().catch(() => ({}))
+      alert(j.error ?? 'Something went wrong')
+    }
+    setBusy(null)
+  }
+
+  const STATUS_STYLE: Record<string, string> = {
+    pending: 'bg-yellow-100 text-yellow-700',
+    approved: 'bg-green-100 text-green-700',
+    rejected: 'bg-gray-100 text-gray-500',
+  }
+
+  return (
+    <div>
+      <div className="flex gap-2 mb-6">
+        {(['pending', 'all'] as const).map((f) => (
+          <button key={f} onClick={() => setFilter(f)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === f ? 'text-white bg-sky-500' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            {f === 'pending' ? `Pending (${pendingCount})` : `All (${claims.length})`}
+          </button>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        {filtered.length === 0 ? (
+          <p className="text-center text-gray-400 py-12">No claims in this view.</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {filtered.map((claim) => (
+              <div key={claim.id} className="p-5">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_STYLE[claim.status]}`}>{claim.status}</span>
+                      <span className="text-xs text-gray-400">{new Date(claim.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                    </div>
+                    <p className="font-semibold text-gray-900 truncate">
+                      {claim.slug
+                        ? <a href={`/listings/${claim.slug}`} target="_blank" rel="noopener noreferrer" className="hover:text-sky-600 hover:underline">{claim.business_name ?? 'Unknown listing'}</a>
+                        : (claim.business_name ?? 'Unknown listing')}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      👤 {claim.claimant_name} · ✉️ <a href={`mailto:${claim.claimant_email}`} className="hover:underline">{claim.claimant_email}</a>
+                    </p>
+                    {claim.message && <p className="text-xs text-gray-500 mt-1 italic">“{claim.message}”</p>}
+                  </div>
+
+                  {claim.status === 'pending' && (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button onClick={() => review(claim.id, 'approve')} disabled={busy === claim.id}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg text-white disabled:opacity-50"
+                        style={{ backgroundColor: '#007A4D' }}>
+                        Approve &amp; Verify
+                      </button>
+                      <button onClick={() => review(claim.id, 'reject')} disabled={busy === claim.id}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg text-red-600 border border-red-200 hover:bg-red-50 disabled:opacity-50">
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function AdminDashboard({ listings: initial, events: initialEvents, claims: initialClaims }: { listings: Listing[], events: Event[], claims: ListingClaim[] }) {
+  const [tab, setTab] = useState<'listings' | 'events' | 'claims'>('listings')
+  const pendingClaims = initialClaims.filter((c) => c.status === 'pending').length
   const [listings, setListings] = useState(initial)
   const [filter, setFilter] = useState<ListingStatus | 'all'>('pending')
   const [busy, setBusy] = useState<string | null>(null)
@@ -467,6 +558,18 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
       body: JSON.stringify({ sells_online }),
     })
     setListings((prev) => prev.map((l) => (l.id === id ? { ...l, sells_online } : l)))
+  }
+
+  async function toggleVerified(id: string, is_verified: boolean) {
+    const patch = is_verified
+      ? { is_verified: true, verified_at: new Date().toISOString(), verified_via: 'admin' as const }
+      : { is_verified: false, verified_at: null, verified_via: null }
+    await fetch(`/api/admin/listings/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    setListings((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)))
   }
 
   async function saveTags(id: string, tags: string[]) {
@@ -528,9 +631,19 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
           className={`px-5 py-2 rounded-lg font-medium text-sm transition-all ${tab === 'events' ? 'text-white bg-red-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
           🎉 Events
         </button>
+        <button onClick={() => setTab('claims')}
+          className={`px-5 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 ${tab === 'claims' ? 'text-white bg-sky-500' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          ✓ Claims
+          {pendingClaims > 0 && (
+            <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${tab === 'claims' ? 'bg-white text-sky-600' : 'bg-sky-500 text-white'}`}>
+              {pendingClaims}
+            </span>
+          )}
+        </button>
       </div>
 
       {tab === 'events' && <EventsPanel events={initialEvents} />}
+      {tab === 'claims' && <ClaimsPanel claims={initialClaims} />}
       {tab === 'listings' && <div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
@@ -571,6 +684,11 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
                     <p className="text-xs text-gray-400 mt-0.5">
                       👁 {listing.view_count ?? 0} views · 🔗 {listing.click_count ?? 0} clicks
                       {(listing.view_count ?? 0) >= 50 && <span className="ml-1 text-orange-500 font-medium">🔥 Popular</span>}
+                      {listing.is_verified && (
+                        <span className="ml-1 text-sky-500 font-medium">
+                          ✓ Verified{listing.verified_via === 'owner_claim' ? ' (owner)' : ''}
+                        </span>
+                      )}
                     </p>
                     {listing.description && (
                       <p className="text-xs text-gray-400 mt-1 line-clamp-1">{listing.description}</p>
@@ -615,6 +733,19 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
                       }`}
                     >
                       🛒 {listing.sells_online ? 'Online ✓' : 'Online?'}
+                    </button>
+                    <button
+                      onClick={() => toggleVerified(listing.id, !listing.is_verified)}
+                      title={listing.is_verified
+                        ? `Verified${listing.verified_via === 'owner_claim' ? ' by owner claim' : ' by you'} — click to remove`
+                        : 'Mark as a confirmed genuine SA-owned business'}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                        listing.is_verified
+                          ? 'bg-sky-500 text-white border-sky-500 hover:bg-sky-600'
+                          : 'border-sky-300 text-sky-600 hover:bg-sky-50'
+                      }`}
+                    >
+                      ✓ {listing.is_verified ? 'Verified' : 'Verify?'}
                     </button>
                     <button
                       onClick={() => setExpandedTags(expandedTags === listing.id ? null : listing.id)}

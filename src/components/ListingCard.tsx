@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Listing } from '@/lib/types'
 import { getRegionColor, getCountryFlag } from '@/lib/regions'
+import VerifiedBadge from './VerifiedBadge'
 
 const POPULAR_THRESHOLD = 50
 
@@ -56,8 +57,9 @@ export default function ListingCard({ listing }: Props) {
                 </span>
               </div>
             )}
-            <h3 className="font-semibold text-gray-900 group-hover:text-green-700 transition-colors truncate">
-              {listing.business_name}
+            <h3 className="font-semibold text-gray-900 group-hover:text-green-700 transition-colors flex items-center gap-1">
+              <span className="truncate">{listing.business_name}</span>
+              {listing.is_verified && <VerifiedBadge size="sm" />}
             </h3>
             {/* Location — flag image + city/country, more prominent */}
             <p className="text-sm font-medium text-gray-600 mt-0.5 truncate flex items-center gap-1.5">

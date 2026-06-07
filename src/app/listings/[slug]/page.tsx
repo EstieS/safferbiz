@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import type { Listing } from '@/lib/types'
 import ViewTracker from '@/components/ViewTracker'
 import ListingLinks from '@/components/ListingLinks'
+import VerifiedBadge from '@/components/VerifiedBadge'
 import { getCountryFlag } from '@/lib/regions'
 
 const POPULAR_THRESHOLD = 50
@@ -95,7 +96,10 @@ export default async function ListingPage({ params }: Props) {
                 </span>
               </div>
             )}
-            <h1 className="text-3xl font-bold text-gray-900">{listing.business_name}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-3xl font-bold text-gray-900">{listing.business_name}</h1>
+              {listing.is_verified && <VerifiedBadge size="md" withLabel />}
+            </div>
             <p className="text-base font-medium text-gray-600 mt-1 flex items-center gap-1.5">
               {flag
                 ? <img src={flag} alt={listing.country} width={20} height={15} className="inline-block flex-shrink-0" />
@@ -144,6 +148,16 @@ export default async function ListingPage({ params }: Props) {
           instagram_url={listing.instagram_url}
         />
       </div>
+
+      {!listing.claimed_by_email && (
+        <p className="text-center text-xs text-gray-400 mt-4">
+          Is this your business?{' '}
+          <Link href={`/claim/${slug}`} className="text-green-700 hover:underline font-medium">
+            Claim this listing
+          </Link>{' '}
+          to verify it and manage your details.
+        </p>
+      )}
     </div>
   )
 }

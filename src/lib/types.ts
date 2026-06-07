@@ -22,8 +22,28 @@ export interface Listing {
   click_count: number
   latitude: number | null
   longitude: number | null
+  is_verified: boolean
+  verified_at: string | null
+  verified_via: 'admin' | 'owner_claim' | null
+  claimed_by_email: string | null
   created_at: string
   updated_at: string
+}
+
+export type ClaimStatus = 'pending' | 'approved' | 'rejected'
+
+export interface ListingClaim {
+  id: string
+  listing_id: string
+  claimant_name: string
+  claimant_email: string
+  message: string | null
+  status: ClaimStatus
+  created_at: string
+  reviewed_at: string | null
+  // Joined from listings for admin display
+  business_name?: string
+  slug?: string
 }
 
 export type EventStatus = 'active' | 'pending' | 'inactive'
