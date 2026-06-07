@@ -52,45 +52,45 @@ if (!DRY_RUN) sgMail.setApiKey(SENDGRID_KEY)
 function buildEmail(listing) {
   const claimUrl = `${SITE}/claim/${listing.slug}`
   const listingUrl = `${SITE}/listings/${listing.slug}`
+  // Deliberately plain + personal so Gmail treats it as a 1:1 note (Primary tab)
+  // rather than a marketing blast (Promotions tab): no header banner, no big
+  // button, no bullet list, no emoji, plain-text links, conversational tone.
   return {
     to: listing.email,
-    from: { email: FROM_EMAIL, name: 'SafferBiz' },
-    subject: `Claim your business on SafferBiz ✓`,
+    from: { email: FROM_EMAIL, name: 'Estie at SafferBiz' },
+    replyTo: FROM_EMAIL,
+    subject: `Claim your SafferBiz listing for ${listing.business_name}`,
+    text:
+`Hi there,
+
+I'm Estie from SafferBiz, the directory South African expats use to find SA businesses around the world. ${listing.business_name} is listed with us, and I wanted to give you the chance to claim it as the owner.
+
+Claiming your listing gets you a verified badge and lets you keep your own details up to date (description, products, links, and so on). We check each claim by hand and then send you a private link to manage it.
+
+You can claim it here:
+${claimUrl}
+
+Or have a look at your current listing first:
+${listingUrl}
+
+If this isn't your business, or you'd rather not be listed, just reply to this email and I'll sort it out.
+
+Cheers,
+Estie
+SafferBiz`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: #007A4D; padding: 24px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">Saffer<span style="color: #FFB612;">Biz</span></h1>
-        </div>
-        <div style="padding: 32px 24px;">
-          <p style="color: #555; margin-top: 0;">Hi there,</p>
-          <p style="color: #555;">
-            Your business <strong>${listing.business_name}</strong> is listed on SafferBiz, the directory
-            South African expats use to find SA businesses around the world. 🇿🇦
-          </p>
-          <p style="color: #555;">
-            We've just launched <strong>verified business profiles</strong> — and we'd love for you to claim yours.
-            When you claim your listing, you'll get:
-          </p>
-          <ul style="color: #555; font-size: 14px; line-height: 1.9;">
-            <li>A blue <strong>✓ Verified</strong> badge that helps customers trust you</li>
-            <li>The ability to <strong>update your own details</strong> anytime — description, products, links and more</li>
-            <li>Peace of mind that your info is accurate</li>
-          </ul>
-
-          <a href="${claimUrl}" style="display: inline-block; background: #007A4D; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 16px 0;">
-            Claim ${listing.business_name} →
-          </a>
-
-          <p style="color: #777; font-size: 13px;">
-            It takes a minute — we review each claim by hand and email you a private link to manage your listing once approved.
-          </p>
-          <p style="color: #777; font-size: 13px;">
-            You can preview your current listing <a href="${listingUrl}" style="color: #007A4D;">here</a>.
-            If this business isn't yours or you'd rather not be listed, just reply and we'll sort it out.
-          </p>
-
-          <p style="color: #555; margin-top: 24px;">Cheers,<br/>Estie<br/>SafferBiz</p>
-        </div>
+      <div style="font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #222; line-height: 1.6; max-width: 600px;">
+        <p>Hi there,</p>
+        <p>I'm Estie from SafferBiz, the directory South African expats use to find SA businesses around the world. <strong>${listing.business_name}</strong> is listed with us, and I wanted to give you the chance to claim it as the owner.</p>
+        <p>Claiming your listing gets you a verified badge and lets you keep your own details up to date (description, products, links, and so on). We check each claim by hand and then send you a private link to manage it.</p>
+        <p>You can claim it here:<br/>
+          <a href="${claimUrl}" style="color: #007A4D;">${claimUrl}</a>
+        </p>
+        <p>Or have a look at your current listing first:<br/>
+          <a href="${listingUrl}" style="color: #007A4D;">${listingUrl}</a>
+        </p>
+        <p>If this isn't your business, or you'd rather not be listed, just reply to this email and I'll sort it out.</p>
+        <p>Cheers,<br/>Estie<br/>SafferBiz</p>
       </div>
     `,
   }
