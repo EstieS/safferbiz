@@ -39,6 +39,7 @@ export const COUNTRIES = [
   'United Arab Emirates',
   'United Kingdom',
   'United States',
+  'Zimbabwe',
   'Other',
 ] as const
 

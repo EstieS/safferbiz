@@ -26,7 +26,7 @@ const CODE = {
   'United Arab Emirates': 'ae', 'Spain': 'es', 'Hong Kong': 'hk', 'France': 'fr', 'Mauritius': 'mu',
   'Greece': 'gr', 'Colombia': 'co', 'China': 'cn', 'Portugal': 'pt', 'South Korea': 'kr',
   'Luxembourg': 'lu', 'Thailand': 'th', 'Italy': 'it', 'Mexico': 'mx', 'Singapore': 'sg',
-  'India': 'in', 'Israel': 'il', 'Poland': 'pl',
+  'India': 'in', 'Israel': 'il', 'Poland': 'pl', 'Zimbabwe': 'zw',
 }
 
 // Names that aren't real countries — folded out of the per-country breakdown

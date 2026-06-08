@@ -43,6 +43,7 @@ const COUNTRY_REGION: Record<string, keyof typeof REGION_COLORS> = {
 
   // Africa & Middle East (default green)
   'South Africa':         'africa',
+  'Zimbabwe':             'africa',
   'Mauritius':            'africa',
   'United Arab Emirates': 'africa',
   'Israel':               'africa',
@@ -79,6 +80,7 @@ const COUNTRY_CODE: Record<string, string> = {
   'United Arab Emirates': 'ae',
   'United Kingdom':       'gb',
   'United States':        'us',
+  'Zimbabwe':             'zw',
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
