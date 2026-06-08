@@ -8,6 +8,7 @@ import type { Listing } from '@/lib/types'
 
 export default async function HomePage() {
   const supabase = await createServerSupabaseClient()
+  const today = new Date().toISOString().slice(0, 10)
 
   const [{ data: recentListings }, { count: totalListings }, { data: countryRows }, { count: totalEvents }] =
     await Promise.all([
@@ -29,7 +30,8 @@ export default async function HomePage() {
         .from('events')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'active')
-        .gte('event_date', new Date().toISOString().slice(0, 10)),
+        // Current & future: not yet ended (multi-day) or not yet started
+        .or(`event_end_date.gte.${today},and(event_end_date.is.null,event_date.gte.${today})`),
     ])
 
   const listings = (recentListings ?? []) as Listing[]

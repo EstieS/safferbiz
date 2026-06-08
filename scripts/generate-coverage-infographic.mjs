@@ -54,10 +54,14 @@ const GOLD = '#FFB612'
 const RED = '#DE3831'
 
 async function main() {
-  const [{ data: listings }, { data: events }] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10)
+  const [{ data: listings }, { data: allEvents }] = await Promise.all([
     supabase.from('listings').select('country').eq('status', 'active'),
-    supabase.from('events').select('country').eq('status', 'active'),
+    supabase.from('events').select('country, event_date, event_end_date').eq('status', 'active'),
   ])
+
+  // Count only current & future events (matches the homepage stat)
+  const events = (allEvents || []).filter((e) => (e.event_end_date || e.event_date) >= today)
 
   const biz = tally(listings)
   const ev = tally(events)
