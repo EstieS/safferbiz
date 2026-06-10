@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createServerSupabaseClient } from '@/lib/supabase-server'
-import { sendNewListingAlert, sendListingApprovedEmail } from '@/lib/sendgrid'
+import { sendNewListingAlert, sendListingApprovedEmail, sendClaimInviteEmail } from '@/lib/sendgrid'
 import { generateListingPost } from '@/lib/social-posts'
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://safferbiz.com'
+const MANAGE_TOKEN_TTL_DAYS = 60
 
 async function requireAdmin() {
   const supabase = await createServerSupabaseClient()
@@ -32,18 +35,51 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       // Fetch the full listing
       const { data: listing } = await admin
         .from('listings')
-        .select('business_name, slug, category, city, state, country, description, email, website_url, tags, sells_online, feature_on_social')
+        .select('business_name, slug, category, city, state, country, description, email, website_url, tags, sells_online, feature_on_social, source, is_verified')
         .eq('id', id)
         .single()
 
       if (listing) {
-        // Email the business owner
-        if (listing.email) {
-          await sendListingApprovedEmail({
+        const fromForm = listing.source === 'owner' || listing.source === 'admin'
+
+        if (fromForm) {
+          // Form submissions (owner or admin-curated): verify on approval and
+          // give the listing owner a private self-manage link.
+          if (!listing.is_verified) {
+            await admin.from('listings').update({
+              is_verified: true,
+              verified_at: new Date().toISOString(),
+              verified_via: 'admin',
+            }).eq('id', id)
+          }
+
+          let manageUrl: string | undefined
+          try {
+            const manageToken = crypto.randomUUID() + crypto.randomUUID().replace(/-/g, '')
+            const expires = new Date(Date.now() + MANAGE_TOKEN_TTL_DAYS * 86400000).toISOString()
+            const { error: tokenErr } = await admin
+              .from('listing_manage_tokens')
+              .upsert({ listing_id: id, token: manageToken, expires_at: expires }, { onConflict: 'listing_id' })
+            if (!tokenErr) manageUrl = `${SITE}/manage/${listing.slug}?token=${manageToken}`
+          } catch (tokenErr) {
+            console.error('Failed to mint manage token:', tokenErr)
+          }
+
+          if (listing.email) {
+            await sendListingApprovedEmail({
+              business_name: listing.business_name,
+              slug: listing.slug,
+              email: listing.email,
+              manageUrl,
+            }).catch(err => console.error('Failed to send approval email to business:', err))
+          }
+        } else if (listing.email) {
+          // AI-discovered: stays unverified — invite the owner to claim it
+          await sendClaimInviteEmail({
             business_name: listing.business_name,
             slug: listing.slug,
             email: listing.email,
-          }).catch(err => console.error('Failed to send approval email to business:', err))
+          }).catch(err => console.error('Failed to send claim invite:', err))
         }
 
         // Alert matching subscribers

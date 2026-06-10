@@ -152,6 +152,7 @@ async function main() {
       city: null,
       website_url: website_url || null,
       status: 'pending',
+      source: 'ai',
       sells_online: false,
       tags: [],
     })

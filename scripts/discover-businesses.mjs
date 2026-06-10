@@ -281,6 +281,7 @@ async function createPendingRecords(businesses, country) {
       city: biz.city || null,
       website_url: biz.website_url || null,
       status: 'pending',
+      source: 'ai',
       feature_on_social: false,
       tags: [],
       sells_online: false,

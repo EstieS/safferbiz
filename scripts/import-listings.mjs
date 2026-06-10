@@ -1,10 +1,17 @@
 import { createClient } from '@supabase/supabase-js'
 import { parse } from 'csv-parse'
 import { createReadStream } from 'fs'
+import * as dotenv from 'dotenv'
+dotenv.config({ path: '.env.local' })
 
-const SUPABASE_URL = 'https://mncaepsshphhxaojlrwv.supabase.co'
-const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1uY2FlcHNzaHBoaHhhb2pscnd2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzU4MzIwMywiZXhwIjoyMDkzMTU5MjAzfQ.MfFPa7R6eVBhoD1_62vADafLOMRSZn86NL2gk-xN5pg'
-const CSV_PATH = 'C:/Users/estie/Downloads/export_All-AllBusinesses-modified--_2026-05-01_00-36-58.csv'
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+const CSV_PATH = process.env.IMPORT_CSV_PATH ?? 'C:/Users/estie/Downloads/export_All-AllBusinesses-modified--_2026-05-01_00-36-58.csv'
+
+if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  console.error('❌  Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local')
+  process.exit(1)
+}
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
@@ -149,6 +156,7 @@ async function main() {
       instagram_url: row['Instagram']?.trim() || null,
       email: row['Email']?.trim() || null,
       status: 'active',
+      source: 'admin',
     }
 
     const { error } = await supabase.from('listings').insert(listing)

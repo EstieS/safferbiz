@@ -108,6 +108,7 @@ export async function sendListingApprovedEmail(listing: {
   business_name: string
   slug: string
   email: string
+  manageUrl?: string
 }) {
   const listingUrl = `${SITE}/listings/${listing.slug}`
 
@@ -122,22 +123,81 @@ export async function sendListingApprovedEmail(listing: {
         </div>
         <div style="padding: 32px 24px;">
           <p style="color: #555; margin-top: 0;">Great news!</p>
-          <p style="color: #555;">Your listing for <strong>${listing.business_name}</strong> has been approved and is now live on SafferBiz. South African expats worldwide can now find you!</p>
+          <p style="color: #555;">Your listing for <strong>${listing.business_name}</strong> has been approved and is now live on SafferBiz, with a blue <strong>✓ Verified</strong> badge. South African expats worldwide can now find you!</p>
 
           <a href="${listingUrl}" style="display: inline-block; background: #007A4D; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 16px 0;">
             View Your Listing →
           </a>
 
+          ${listing.manageUrl ? `
+          <div style="background: #f9f9f9; border-left: 4px solid #007A4D; padding: 16px 20px; border-radius: 4px; margin: 20px 0;">
+            <p style="margin: 0 0 8px; color: #555; font-size: 14px;">Need to update your details? You can edit your listing yourself anytime:</p>
+            <a href="${listing.manageUrl}" style="color: #007A4D; font-weight: bold; font-size: 14px;">Manage your listing →</a>
+            <p style="margin: 8px 0 0; color: #999; font-size: 12px;">Keep this link private — anyone with it can edit your listing.</p>
+          </div>
+          ` : ''}
+
           <p style="color: #555; margin-top: 24px;">A few tips to make the most of your listing:</p>
           <ul style="color: #555; font-size: 14px; line-height: 1.8;">
             <li>Share your listing link with your customers</li>
             <li>Add it to your social media profiles</li>
-            <li>Let us know if any details need updating — just reply to this email</li>
+            ${listing.manageUrl ? '' : '<li>Let us know if any details need updating — just reply to this email</li>'}
           </ul>
 
           <p style="color: #555;">Thank you for being part of the SafferBiz community!</p>
           <p style="color: #555;">Cheers,<br/>Estie<br/>SafferBiz</p>
         </div>
+      </div>
+    `,
+  })
+}
+
+// Invite the (unaware) owner of an AI-discovered listing to claim it.
+// Plain/personal styling so Gmail favours the Primary/Updates tab over Promotions.
+export async function sendClaimInviteEmail(listing: {
+  business_name: string
+  slug: string
+  email: string
+}) {
+  const claimUrl = `${SITE}/claim/${listing.slug}`
+  const listingUrl = `${SITE}/listings/${listing.slug}`
+
+  await sgMail.send({
+    to: listing.email,
+    from: { email: FROM, name: 'Estie at SafferBiz' },
+    replyTo: FROM,
+    subject: `Claim your SafferBiz listing for ${listing.business_name}`,
+    text:
+`Hi there,
+
+I'm Estie from SafferBiz, the directory South African expats use to find SA businesses around the world. ${listing.business_name} is now listed with us, and I wanted to give you the chance to claim it as the owner.
+
+Claiming your listing gets you a verified badge and lets you keep your own details up to date (description, products, links, and so on). We check each claim by hand and then send you a private link to manage it.
+
+You can claim it here:
+${claimUrl}
+
+Or have a look at your current listing first:
+${listingUrl}
+
+If this isn't your business, or you'd rather not be listed, just reply to this email and I'll sort it out.
+
+Cheers,
+Estie
+SafferBiz`,
+    html: `
+      <div style="font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #222; line-height: 1.6; max-width: 600px;">
+        <p>Hi there,</p>
+        <p>I'm Estie from SafferBiz, the directory South African expats use to find SA businesses around the world. <strong>${listing.business_name}</strong> is now listed with us, and I wanted to give you the chance to claim it as the owner.</p>
+        <p>Claiming your listing gets you a verified badge and lets you keep your own details up to date (description, products, links, and so on). We check each claim by hand and then send you a private link to manage it.</p>
+        <p>You can claim it here:<br/>
+          <a href="${claimUrl}" style="color: #007A4D;">${claimUrl}</a>
+        </p>
+        <p>Or have a look at your current listing first:<br/>
+          <a href="${listingUrl}" style="color: #007A4D;">${listingUrl}</a>
+        </p>
+        <p>If this isn't your business, or you'd rather not be listed, just reply to this email and I'll sort it out.</p>
+        <p>Cheers,<br/>Estie<br/>SafferBiz</p>
       </div>
     `,
   })

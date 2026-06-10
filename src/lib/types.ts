@@ -26,6 +26,7 @@ export interface Listing {
   verified_at: string | null
   verified_via: 'admin' | 'owner_claim' | null
   claimed_by_email: string | null
+  source: 'owner' | 'admin' | 'ai'
   created_at: string
   updated_at: string
 }

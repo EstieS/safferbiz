@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       latitude: coords?.latitude ?? null,
       longitude: coords?.longitude ?? null,
       status: 'pending',
+      source: 'owner',
     })
 
     if (error) throw error
