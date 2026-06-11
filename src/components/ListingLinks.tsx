@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 const SITE = 'https://safferbiz.com'
 
 interface Props {
@@ -22,12 +24,24 @@ function ensureHttps(url: string): string {
 }
 
 export default function ListingLinks({ slug, businessName, website_url, email, facebook_url, instagram_url }: Props) {
+  const [copied, setCopied] = useState(false)
   const shareUrl = `${SITE}/listings/${slug}`
   const shareText = `Check out ${businessName} on SafferBiz 🇿🇦`
   const message = `${shareText} ${shareUrl}`
   // wa.me opens WhatsApp; sms:?&body works on both iOS and Android
   const whatsappHref = `https://wa.me/?text=${encodeURIComponent(message)}`
   const smsHref = `sms:?&body=${encodeURIComponent(message)}`
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard blocked — fall back to a prompt so the user can copy manually
+      window.prompt('Copy this link:', shareUrl)
+    }
+  }
 
   return (
     <div className="border-t border-gray-100 pt-6 space-y-3">
@@ -106,6 +120,28 @@ export default function ListingLinks({ slug, businessName, website_url, email, f
             </svg>
             Messages
           </a>
+          <button
+            type="button"
+            onClick={copyLink}
+            aria-label={`Copy link to ${businessName}`}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+              copied
+                ? 'bg-green-50 border-green-300 text-green-700'
+                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            {copied ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                Copied!
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+                Copy link
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
