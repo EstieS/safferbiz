@@ -142,6 +142,7 @@ export default async function ListingPage({ params }: Props) {
 
         <ListingLinks
           slug={slug}
+          businessName={listing.business_name}
           website_url={listing.website_url}
           email={listing.email}
           facebook_url={listing.facebook_url}
