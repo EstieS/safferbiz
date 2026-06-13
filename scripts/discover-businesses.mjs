@@ -204,31 +204,49 @@ ${resultsText}`,
   }
 }
 
+// ─── Same-business matching (mirror of src/lib/dedup.ts) ─────────────────────
+// Primary key: website domain. Fallback: name + country + city (so the same
+// name in different countries is NOT treated as a duplicate).
+const SHARED_DOMAINS = new Set([
+  'facebook.com', 'm.facebook.com', 'fb.com', 'fb.me',
+  'instagram.com', 'etsy.com', 'linktr.ee', 'linktree.com', 'beacons.ai',
+  'wa.me', 'whatsapp.com', 'api.whatsapp.com',
+  'twitter.com', 'x.com', 'tiktok.com', 'youtube.com', 'youtu.be',
+  'pinterest.com', 'linkedin.com', 'google.com', 'goo.gl',
+  'maps.google.com', 'business.google.com', 'sites.google.com', 'g.page',
+])
+function normDomain(url) {
+  if (!url) return ''
+  const d = url.toLowerCase().trim()
+    .replace(/^https?:\/\//, '').replace(/^www\./, '')
+    .split(/[/?#]/)[0].replace(/\/$/, '')
+  return SHARED_DOMAINS.has(d) ? '' : d
+}
+function normText(t) { return (t ?? '').toLowerCase().trim().replace(/\s+/g, ' ') }
+
 // ─── Agent 2: Deduplicate against Supabase ────────────────────────────────────
 async function deduplicateBusinesses(candidates, country) {
   console.log(`\n🔎 Agent 2: Deduplicating ${candidates.length} candidates...`)
 
   const { data: existing, error } = await supabase
     .from('listings')
-    .select('business_name, website_url')
+    .select('business_name, website_url, country, city')
 
   if (error) throw new Error(`Supabase fetch error: ${error.message}`)
 
-  const existingNames = new Set(
-    (existing ?? []).map(r => r.business_name.toLowerCase().trim())
+  const existingDomains = new Set(
+    (existing ?? []).map(r => normDomain(r.website_url)).filter(Boolean)
   )
-  const existingUrls = new Set(
-    (existing ?? [])
-      .map(r => r.website_url)
-      .filter(Boolean)
-      .map(u => u.toLowerCase().replace(/\/$/, ''))
+  const existingNameLoc = new Set(
+    (existing ?? []).map(r => `${normText(r.business_name)}|${normText(r.country)}|${normText(r.city)}`)
   )
 
   const newOnes = candidates.filter(biz => {
-    const nameMatch = existingNames.has(biz.business_name.toLowerCase().trim())
-    const urlMatch = biz.website_url &&
-      existingUrls.has(biz.website_url.toLowerCase().replace(/\/$/, ''))
-    return !nameMatch && !urlMatch
+    const bizCountry = isWorldwide ? (biz.country || 'Other') : country
+    const domain = normDomain(biz.website_url)
+    const domainMatch = domain && existingDomains.has(domain)
+    const nameLocMatch = existingNameLoc.has(`${normText(biz.business_name)}|${normText(bizCountry)}|${normText(biz.city)}`)
+    return !domainMatch && !nameLocMatch
   })
 
   // Flag any businesses from countries not yet in SafferBiz

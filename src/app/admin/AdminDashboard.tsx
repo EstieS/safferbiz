@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type { Listing, ListingStatus, Event, EventStatus, ListingClaim } from '@/lib/types'
 import { PRODUCT_TAGS, CATEGORIES, COUNTRIES } from '@/lib/constants'
+import { findDuplicates } from '@/lib/dedup'
 
 // ─── App Banner Control ───────────────────────────────────────────────────────
 
@@ -540,6 +541,9 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
   const filtered = (filter === 'all' ? listings : listings.filter((l) => l.status === filter))
     .slice().sort((a, b) => a.business_name.localeCompare(b.business_name))
 
+  // Possible duplicates: same website domain, or same name + country + city
+  const dupMap = useMemo(() => findDuplicates(listings), [listings])
+
   async function updateStatus(id: string, status: ListingStatus) {
     setBusy(id)
     await fetch(`/api/admin/listings/${id}`, {
@@ -690,6 +694,11 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
                         </span>
                       )}
                     </p>
+                    {(dupMap.get(listing.id)?.length ?? 0) > 0 && (
+                      <p className="text-xs mt-1.5 inline-block px-2 py-1 rounded-md bg-amber-50 border border-amber-200 text-amber-700">
+                        ⚠️ Possible duplicate of <strong>{dupMap.get(listing.id)!.join(', ')}</strong> — same website or name/location
+                      </p>
+                    )}
                     {listing.description && (
                       <p className="text-xs text-gray-400 mt-1 line-clamp-1">{listing.description}</p>
                     )}
