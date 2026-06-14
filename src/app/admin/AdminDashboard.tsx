@@ -439,10 +439,15 @@ function EventsPanel({ events: initialEvents }: { events: Event[] }) {
   )
 }
 
-function ClaimsPanel({ claims: initialClaims }: { claims: ListingClaim[] }) {
+function ClaimsPanel({ claims: initialClaims, listings, onSaveListing }: {
+  claims: ListingClaim[]
+  listings: Listing[]
+  onSaveListing: (id: string, data: Partial<Listing>) => void | Promise<void>
+}) {
   const [claims, setClaims] = useState(initialClaims)
   const [busy, setBusy] = useState<string | null>(null)
   const [filter, setFilter] = useState<'pending' | 'all'>('pending')
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   const filtered = filter === 'pending' ? claims.filter((c) => c.status === 'pending') : claims
   const pendingCount = claims.filter((c) => c.status === 'pending').length
@@ -507,7 +512,11 @@ function ClaimsPanel({ claims: initialClaims }: { claims: ListingClaim[] }) {
                   </div>
 
                   {claim.status === 'pending' && (
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                      <button onClick={() => setEditingId(editingId === claim.id ? null : claim.id)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg border ${editingId === claim.id ? 'border-gray-400 bg-gray-100 text-gray-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+                        {editingId === claim.id ? 'Close editor' : 'Edit listing'}
+                      </button>
                       <button onClick={() => review(claim.id, 'approve')} disabled={busy === claim.id}
                         className="px-3 py-1.5 text-xs font-medium rounded-lg text-white disabled:opacity-50"
                         style={{ backgroundColor: '#007A4D' }}>
@@ -520,6 +529,18 @@ function ClaimsPanel({ claims: initialClaims }: { claims: ListingClaim[] }) {
                     </div>
                   )}
                 </div>
+
+                {editingId === claim.id && (() => {
+                  const listing = listings.find((l) => l.id === claim.listing_id)
+                  return listing ? (
+                    <ListingEditor
+                      listing={listing}
+                      onSave={async (data) => { await onSaveListing(listing.id, data); setEditingId(null) }}
+                    />
+                  ) : (
+                    <p className="mt-3 text-xs text-red-500">Listing not found — it may have been deleted.</p>
+                  )
+                })()}
               </div>
             ))}
           </div>
@@ -647,7 +668,7 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
       </div>
 
       {tab === 'events' && <EventsPanel events={initialEvents} />}
-      {tab === 'claims' && <ClaimsPanel claims={initialClaims} />}
+      {tab === 'claims' && <ClaimsPanel claims={initialClaims} listings={listings} onSaveListing={saveListing} />}
       {tab === 'listings' && <div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
