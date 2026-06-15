@@ -1,0 +1,38 @@
+name: 🔥 Braai Day Friday (weekend events)
+
+on:
+  schedule:
+    - cron: '0 13 * * 5'   # Fridays 13:00 UTC (~9am US Eastern) — in time to post for the weekend
+  workflow_dispatch:
+    inputs:
+      top:
+        description: 'How many upcoming events to feature'
+        required: false
+        default: '3'
+      dry_run:
+        description: 'Dry run (preview only, no email)'
+        type: boolean
+        default: false
+
+jobs:
+  braai-day:
+    name: Draft weekend events post
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Run upcoming-events post agent
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ secrets.SENDGRID_FROM_EMAIL }}
+        run: |
+          node scripts/post-top-events.mjs \
+            --top=${{ github.event.inputs.top || '3' }} \
+            ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
