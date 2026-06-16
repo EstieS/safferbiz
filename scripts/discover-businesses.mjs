@@ -23,7 +23,7 @@ config({ path: join(__dirname, '../.env.local') })
 
 // ─── Schedule: day-of-week → country ─────────────────────────────────────────
 const DAY_TO_COUNTRY = {
-  1: 'Canada',          // Monday (SafferBiz only features SA businesses ABROAD, not in SA)
+  1: 'rotate2',         // Monday → second rotation slot (offset half-cycle from Sunday)
   2: 'United Kingdom',  // Tuesday
   3: 'Australia',       // Wednesday
   4: 'United States',   // Thursday
@@ -58,9 +58,12 @@ const ROTATE_COUNTRIES = [
   '__worldwide__', // broad sweep — catches countries not yet listed
 ]
 
-function getRotatingCountry() {
+// Monday rotates half a cycle ahead of Sunday so the two rotation days never
+// pick the same country — roughly doubling how often each rotation country runs.
+const ROTATE_OFFSET = Math.floor(ROTATE_COUNTRIES.length / 2)
+function getRotatingCountry(offset = 0) {
   const weekNumber = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000))
-  return ROTATE_COUNTRIES[weekNumber % ROTATE_COUNTRIES.length]
+  return ROTATE_COUNTRIES[(weekNumber + offset) % ROTATE_COUNTRIES.length]
 }
 
 // ─── CLI args ─────────────────────────────────────────────────────────────────
@@ -73,13 +76,11 @@ const rawCountry = countryArg
   ? countryArg.split('=').slice(1).join('=').replace(/^["']|["']$/g, '')
   : DAY_TO_COUNTRY[new Date().getDay()] ?? 'United Kingdom'
 
-const isWorldwide = rawCountry === 'rotate'
-  ? getRotatingCountry() === '__worldwide__'
-  : rawCountry === '__worldwide__'
-
-const country = rawCountry === 'rotate'
-  ? getRotatingCountry()
-  : rawCountry
+const country =
+  rawCountry === 'rotate'  ? getRotatingCountry(0) :
+  rawCountry === 'rotate2' ? getRotatingCountry(ROTATE_OFFSET) :
+  rawCountry
+const isWorldwide = country === '__worldwide__'
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
