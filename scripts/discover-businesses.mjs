@@ -23,7 +23,7 @@ config({ path: join(__dirname, '../.env.local') })
 
 // ─── Schedule: day-of-week → country ─────────────────────────────────────────
 const DAY_TO_COUNTRY = {
-  1: 'South Africa',    // Monday
+  1: 'Canada',          // Monday (SafferBiz only features SA businesses ABROAD, not in SA)
   2: 'United Kingdom',  // Tuesday
   3: 'Australia',       // Wednesday
   4: 'United States',   // Thursday
@@ -172,6 +172,7 @@ async function extractBusinessData(searchResults, country) {
 
 RULES:
 - Only include businesses clearly South African-owned OR serving the SA expat/diaspora community
+- EXCLUDE any business physically located IN South Africa — SafferBiz only features SA businesses OUTSIDE South Africa
 - Skip news articles, directories, Wikipedia, aggregators, Nando's/Woolworths corporate sites
 - Return at most ${limit} businesses
 
@@ -422,7 +423,13 @@ async function main() {
     return
   }
 
-  const candidates = await extractBusinessData(searchResults, country)
+  let candidates = await extractBusinessData(searchResults, country)
+  // Safety net: never add businesses located in South Africa (e.g. from worldwide sweeps)
+  const beforeSA = candidates.length
+  candidates = candidates.filter(b => (b.country ?? '').trim().toLowerCase() !== 'south africa')
+  if (candidates.length < beforeSA) {
+    console.log(`   🚫 Dropped ${beforeSA - candidates.length} business(es) located in South Africa`)
+  }
   if (candidates.length === 0) {
     console.log('\nNo SA businesses extracted from results. Exiting.')
     return

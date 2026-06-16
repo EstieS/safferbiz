@@ -23,7 +23,7 @@ config({ path: join(__dirname, '../.env.local') })
 
 // ─── Schedule: day-of-week → country (same as business agent) ────────────────
 const DAY_TO_COUNTRY = {
-  1: 'South Africa',    // Monday
+  1: 'Canada',          // Monday (SafferBiz only features SA events ABROAD, not in SA)
   2: 'United Kingdom',  // Tuesday
   3: 'Australia',       // Wednesday
   4: 'United States',   // Thursday
@@ -152,6 +152,7 @@ async function extractEventData(searchResults, country) {
 
 Today's date is ${todayStr}. Only include events that:
 - Are clearly SA expat / South African community events
+- Are held OUTSIDE South Africa (exclude any event taking place inside South Africa — this is for the SA diaspora abroad)
 - Have a specific future date (after ${todayStr})
 - Are real ticketed or public events (not vague meetups without dates)
 - Skip past events, recurring weekly pub nights without specific dates, general community pages
