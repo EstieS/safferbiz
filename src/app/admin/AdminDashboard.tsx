@@ -699,6 +699,17 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[listing.status]}`}>
                         {listing.status}
                       </span>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        listing.source === 'owner' ? 'bg-green-100 text-green-700'
+                        : listing.source === 'admin' ? 'bg-blue-100 text-blue-700'
+                        : 'bg-purple-100 text-purple-700'
+                      }`} title={
+                        listing.source === 'owner' ? 'Submitted via the Add Listing form'
+                        : listing.source === 'admin' ? 'Added by you (bulk import)'
+                        : 'Found by the AI discovery agent'
+                      }>
+                        {listing.source === 'owner' ? '👤 Owner' : listing.source === 'admin' ? '✍️ You' : '🤖 AI'}
+                      </span>
                       <span className="text-xs text-gray-400">{listing.category}</span>
                     </div>
                     <p className="font-semibold text-gray-900 truncate">{listing.business_name}</p>
