@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import type { Event } from '@/lib/types'
 import { getRegionColor, getCountryFlag } from '@/lib/regions'
+import AddToCalendar from './AddToCalendar'
 
 interface Props {
   event: Event
@@ -114,6 +115,7 @@ export default function EventCard({ event }: Props) {
                   </svg>
                 </a>
               )}
+              {!isPast && <AddToCalendar event={event} variant="compact" />}
               <span className="text-xs text-gray-400 group-hover:text-green-600 transition-colors">
                 Details →
               </span>

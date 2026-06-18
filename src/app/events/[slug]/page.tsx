@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import type { Event, Listing } from '@/lib/types'
+import AddToCalendar from '@/components/AddToCalendar'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -138,6 +139,7 @@ export default async function EventPage({ params }: Props) {
           )}
 
           <div className="flex flex-wrap items-center gap-3 mb-6">
+            {!isPast && <AddToCalendar event={event} variant="full" />}
             {event.url && (
               <a href={event.url} target="_blank" rel="noopener noreferrer"
                 className="inline-block px-6 py-3 rounded-xl text-white font-semibold text-sm"
