@@ -41,41 +41,41 @@ export default async function HomePage() {
     <div>
       {/* Hero */}
       <section
-        className="py-12 px-4"
+        className="py-6 sm:py-12 px-4"
         style={{ background: 'linear-gradient(135deg, #007A4D 0%, #005a38 100%)' }}
       >
         <div className="max-w-4xl mx-auto text-center">
-          <p className="text-green-200 text-sm font-medium uppercase tracking-widest mb-2">
+          <p className="hidden sm:block text-green-200 text-sm font-medium uppercase tracking-widest mb-2">
             Built by Saffers, for Saffers living abroad
           </p>
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3">
+          <h1 className="text-3xl sm:text-5xl font-bold text-white mb-2 sm:mb-3">
             Find SA Businesses & Events<br />
             <span style={{ color: '#FFB612' }}>Wherever You Are</span>
           </h1>
-          <p className="text-green-100 text-lg mb-5 max-w-2xl mx-auto">
+          <p className="hidden sm:block text-green-100 text-lg mb-5 max-w-2xl mx-auto">
             From biltong and boerewors to braais and community get-togethers -
             discover the Saffers keeping a taste of home alive.
           </p>
 
-          {/* Live stats */}
-          <div className="flex items-center justify-center gap-6 mb-6">
+          {/* Live stats — compact on mobile */}
+          <div className="flex items-center justify-center gap-4 sm:gap-6 mb-4 sm:mb-6">
             <div className="text-center">
-              <p className="text-3xl font-bold text-white">{totalListings ?? 0}</p>
+              <p className="text-xl sm:text-3xl font-bold text-white">{totalListings ?? 0}</p>
               <p className="text-green-200 text-xs uppercase tracking-wide">Businesses</p>
             </div>
-            <div className="w-px h-10 bg-white/20" />
+            <div className="w-px h-8 sm:h-10 bg-white/20" />
             <div className="text-center">
-              <p className="text-3xl font-bold text-white">{countryCount}</p>
+              <p className="text-xl sm:text-3xl font-bold text-white">{countryCount}</p>
               <p className="text-green-200 text-xs uppercase tracking-wide">Countries</p>
             </div>
-            <div className="w-px h-10 bg-white/20" />
+            <div className="w-px h-8 sm:h-10 bg-white/20" />
             <Link href="/events" className="text-center group">
-              <p className="text-3xl font-bold text-white group-hover:text-yellow-300 transition-colors">{totalEvents ?? 0}</p>
-              <p className="text-green-200 text-xs uppercase tracking-wide group-hover:text-yellow-300 transition-colors">Upcoming Events ↗</p>
+              <p className="text-xl sm:text-3xl font-bold text-white group-hover:text-yellow-300 transition-colors">{totalEvents ?? 0}</p>
+              <p className="text-green-200 text-xs uppercase tracking-wide group-hover:text-yellow-300 transition-colors">Events ↗</p>
             </Link>
-            <div className="w-px h-10 bg-white/20" />
+            <div className="w-px h-8 sm:h-10 bg-white/20" />
             <Link href="/submit" className="text-center group">
-              <p className="text-3xl font-bold group-hover:text-yellow-300 transition-colors" style={{ color: '#FFB612' }}>Free</p>
+              <p className="text-xl sm:text-3xl font-bold group-hover:text-yellow-300 transition-colors" style={{ color: '#FFB612' }}>Free</p>
               <p className="text-green-200 text-xs uppercase tracking-wide group-hover:text-yellow-300 transition-colors">To list ↗</p>
             </Link>
           </div>
