@@ -53,8 +53,8 @@ export default async function HomePage() {
             <span style={{ color: '#FFB612' }}>Wherever You Are</span>
           </h1>
           <p className="text-green-100 text-lg mb-5 max-w-2xl mx-auto">
-            The directory for SA expats. Discover South African-owned businesses,
-            community events, and a taste of home - wherever in the world you are.
+            From biltong and boerewors to braais and community get-togethers -
+            discover the Saffers keeping a taste of home alive.
           </p>
 
           {/* Live stats */}
