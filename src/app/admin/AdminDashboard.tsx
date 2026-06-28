@@ -247,6 +247,7 @@ function EventEditor({ event, onSave }: { event: Event; onSave: (data: Partial<E
     description: event.description ?? '',
     venue: event.venue ?? '',
     city: event.city ?? '',
+    country: event.country ?? '',
     url: event.url ?? '',
     facebook_url: event.facebook_url ?? '',
     instagram_url: event.instagram_url ?? '',
@@ -269,6 +270,13 @@ function EventEditor({ event, onSave }: { event: Event; onSave: (data: Partial<E
           <label className="text-xs text-gray-400">City</label>
           <input value={fields.city} onChange={e => set('city', e.target.value)}
             className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400">Country</label>
+          <select value={fields.country} onChange={e => set('country', e.target.value)}
+            className="w-full px-2 py-1 text-xs border border-gray-300 rounded mt-0.5 bg-white">
+            {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
         </div>
         <div>
           <label className="text-xs font-medium text-red-500">Start Date ★</label>
