@@ -1,11 +1,20 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server'
-import type { Club, ClubMember, Book, BookScore } from '@/lib/types'
+import type { Club, ClubMember, Book, BookScore, BookComment, ClubMeeting } from '@/lib/types'
 import BookClubDashboard from './BookClubDashboard'
 
 interface Props {
   params: Promise<{ slug: string }>
+}
+
+function splitMeetings(meetings: ClubMeeting[]): { nextMeeting: ClubMeeting | null; pastMeetings: ClubMeeting[] } {
+  const now = Date.now()
+  const nextMeeting = meetings.find((m) => new Date(m.meeting_at).getTime() >= now) ?? null
+  const pastMeetings = meetings
+    .filter((m) => m !== nextMeeting)
+    .sort((a, b) => new Date(b.meeting_at).getTime() - new Date(a.meeting_at).getTime())
+  return { nextMeeting, pastMeetings }
 }
 
 function ErrorState({ title, body }: { title: string; body: string }) {
@@ -54,21 +63,35 @@ export default async function ClubPage({ params }: Props) {
     )
   }
 
-  const [{ data: membersData }, { data: booksData }, { data: scoresData }] = await Promise.all([
-    admin.from('club_members').select('*').eq('club_id', club.id).order('created_at', { ascending: true }),
-    admin.from('books').select('*').eq('club_id', club.id).order('created_at', { ascending: false }),
-    admin
-      .from('book_scores')
-      .select('*, books!inner(club_id)')
-      .eq('books.club_id', club.id),
-  ])
+  const [{ data: membersData }, { data: booksData }, { data: scoresData }, { data: commentsData }, { data: meetingsData }] =
+    await Promise.all([
+      admin.from('club_members').select('*').eq('club_id', club.id).order('created_at', { ascending: true }),
+      admin.from('books').select('*').eq('club_id', club.id).order('created_at', { ascending: false }),
+      admin
+        .from('book_scores')
+        .select('*, books!inner(club_id)')
+        .eq('books.club_id', club.id),
+      admin
+        .from('book_comments')
+        .select('*, books!inner(club_id)')
+        .eq('books.club_id', club.id),
+      admin
+        .from('club_meetings')
+        .select('*')
+        .eq('club_id', club.id)
+        .order('meeting_at', { ascending: true }),
+    ])
 
   const members = (membersData ?? []) as ClubMember[]
   const scores = (scoresData ?? []) as BookScore[]
+  const comments = (commentsData ?? []) as BookComment[]
   const books = ((booksData ?? []) as Book[]).map((book) => ({
     ...book,
     scores: scores.filter((s) => s.book_id === book.id),
+    comments: comments.filter((c) => c.book_id === book.id),
   }))
+  const meetings = (meetingsData ?? []) as ClubMeeting[]
+  const { nextMeeting, pastMeetings } = splitMeetings(meetings)
 
   return (
     <BookClubDashboard
@@ -76,6 +99,8 @@ export default async function ClubPage({ params }: Props) {
       members={members}
       books={books}
       currentMember={me as ClubMember}
+      nextMeeting={nextMeeting}
+      pastMeetings={pastMeetings}
     />
   )
 }

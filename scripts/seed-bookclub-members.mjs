@@ -16,11 +16,11 @@ const CLUB_SLUG = 'bubbles-and-books'
 
 // Fill in your 5 members here, then run: node scripts/seed-bookclub-members.mjs
 const members = [
-  { email: 'joanne.van.vuuren@gmail.com', name: 'Joanne van Vuuren' },
+  { email: 'joanne.van.vuuren@gmail.com', name: 'Joanne' },
   { email: 'estiesa@gmail.com', name: 'Estie' },
-  { email: 'evanvuuren@gmail.com', name: 'Elna van Vuuren' },
-  { email: 'achenita.hartslief@gmail.com', name: 'Achenita Hartslief' },
-  { email: 'k.vandermerwe@franklincovey.co.uk', name: 'Katoo Van der Merwe' },
+  { email: 'evanvuuren@gmail.com', name: 'Elna' },
+  { email: 'achenita.hartslief@gmail.com', name: 'Achenita' },
+  { email: 'k.vandermerwe@franklincovey.co.uk', name: 'Katoo' },
 ]
 
 function generateTempPassword() {

@@ -97,6 +97,25 @@ export interface BookScore {
   updated_at: string
 }
 
+export interface ClubMeeting {
+  id: string
+  club_id: string
+  book_id: string | null
+  meeting_at: string
+  zoom_link: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BookComment {
+  id: string
+  book_id: string
+  club_member_id: string
+  comment: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Book {
   id: string
   club_id: string
@@ -106,9 +125,11 @@ export interface Book {
   picked_by: string | null
   notes: string | null
   added_by: string | null
+  purchase_link: string | null
   created_at: string
   updated_at: string
   scores?: BookScore[]
+  comments?: BookComment[]
 }
 
 export interface ListingFormData {
