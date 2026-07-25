@@ -126,6 +126,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
   const [meetingZoomLink, setMeetingZoomLink] = useState('')
   const [meetingBookId, setMeetingBookId] = useState('')
   const [showHistory, setShowHistory] = useState(false)
+  const [commentsModalBookId, setCommentsModalBookId] = useState<string | null>(null)
   const [collapsedYears, setCollapsedYears] = useState<Set<string>>(new Set())
 
   function toggleYear(year: string) {
@@ -515,20 +516,18 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                       <td className="py-2 pl-2 text-center font-semibold" style={{ color: WINE }}>
                         {avg !== null ? avg.toFixed(1) : '—'}
                       </td>
-                      <td className="py-2 pl-3 text-xs text-gray-500 min-w-[200px]">
+                      <td className="py-2 pl-3 text-xs">
                         {book.comments && book.comments.length > 0 ? (
-                          <div className="space-y-0.5">
-                            {book.comments.map((c) => (
-                              <div key={c.id}>
-                                <span className="font-semibold" style={{ color: memberColor(members, c.club_member_id) }}>
-                                  {memberName(members, c.club_member_id)}:
-                                </span>{' '}
-                                {c.comment}
-                              </div>
-                            ))}
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setCommentsModalBookId(book.id)}
+                            className="font-medium hover:underline whitespace-nowrap"
+                            style={{ color: WINE }}
+                          >
+                            💬 {book.comments.length} comment{book.comments.length === 1 ? '' : 's'}
+                          </button>
                         ) : (
-                          '—'
+                          <span className="text-gray-400">—</span>
                         )}
                       </td>
                     </tr>
@@ -817,6 +816,47 @@ export default function BookClubDashboard({ club, members, books, currentMember,
         </div>
       )}
       </div>
+
+      {commentsModalBookId && (() => {
+        const modalBook = books.find((b) => b.id === commentsModalBookId)
+        if (!modalBook) return null
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+            onClick={() => setCommentsModalBookId(null)}
+          >
+            <div
+              className="bg-white rounded-2xl max-w-md w-full p-6 max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide" style={{ color: yearColor(years, modalBook.month_label) }}>
+                    {modalBook.month_label}
+                  </p>
+                  <h3 className="font-semibold text-gray-900">{modalBook.title}</h3>
+                </div>
+                <button
+                  onClick={() => setCommentsModalBookId(null)}
+                  className="text-gray-400 hover:text-gray-600 text-xl leading-none shrink-0"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="space-y-3">
+                {modalBook.comments?.map((c) => (
+                  <div key={c.id}>
+                    <p className="text-sm font-semibold" style={{ color: memberColor(members, c.club_member_id) }}>
+                      {memberName(members, c.club_member_id)}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-0.5">{c.comment}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
