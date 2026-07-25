@@ -73,6 +73,44 @@ export interface Event {
   updated_at: string
 }
 
+export interface Club {
+  id: string
+  slug: string
+  name: string
+  created_at: string
+}
+
+export interface ClubMember {
+  id: string
+  club_id: string
+  user_id: string
+  display_name: string
+  created_at: string
+}
+
+export interface BookScore {
+  id: string
+  book_id: string
+  club_member_id: string
+  score: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Book {
+  id: string
+  club_id: string
+  title: string
+  author: string | null
+  month_label: string
+  picked_by: string | null
+  notes: string | null
+  added_by: string | null
+  created_at: string
+  updated_at: string
+  scores?: BookScore[]
+}
+
 export interface ListingFormData {
   business_name: string
   description: string
