@@ -45,6 +45,18 @@ function yearRowBg(years: string[], monthLabel: string): string {
   return YEAR_ROW_BG[yearIndex(years, monthLabel) % YEAR_ROW_BG.length] ?? '#FFFFFF'
 }
 
+// Bands alternate rows within each year's own run, like Excel banded rows --
+// counts reset whenever the year changes so each year's stripes start fresh.
+function computeRowBanding(books: Book[]): boolean[] {
+  const counts: Record<string, number> = {}
+  return books.map((b) => {
+    const year = extractYear(b.month_label)
+    const n = counts[year] ?? 0
+    counts[year] = n + 1
+    return n % 2 === 1
+  })
+}
+
 interface Props {
   club: Club
   members: ClubMember[]
@@ -84,6 +96,7 @@ function formatMeetingDate(iso: string): string {
 export default function BookClubDashboard({ club, members, books, currentMember, nextMeeting, pastMeetings }: Props) {
   const router = useRouter()
   const years = uniqueYearsDesc(books)
+  const rowBanding = computeRowBanding(books)
   const [showAddBook, setShowAddBook] = useState(false)
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
@@ -100,6 +113,33 @@ export default function BookClubDashboard({ club, members, books, currentMember,
   const [meetingZoomLink, setMeetingZoomLink] = useState('')
   const [meetingBookId, setMeetingBookId] = useState('')
   const [showHistory, setShowHistory] = useState(false)
+  const [collapsedYears, setCollapsedYears] = useState<Set<string>>(new Set())
+
+  function toggleYear(year: string) {
+    setCollapsedYears((prev) => {
+      const next = new Set(prev)
+      if (next.has(year)) {
+        next.delete(year)
+      } else {
+        next.add(year)
+      }
+      return next
+    })
+  }
+
+  const [collapsedBookYears, setCollapsedBookYears] = useState<Set<string>>(new Set())
+
+  function toggleBookYear(year: string) {
+    setCollapsedBookYears((prev) => {
+      const next = new Set(prev)
+      if (next.has(year)) {
+        next.delete(year)
+      } else {
+        next.add(year)
+      }
+      return next
+    })
+  }
 
   async function handleAddBook(e: React.FormEvent) {
     e.preventDefault()
@@ -368,7 +408,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
 
       {books.length > 0 && (
         <div className="mt-6 bg-white rounded-2xl border border-rose-100 p-4 overflow-x-auto">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+          <h2 className="text-lg font-bold text-gray-700 uppercase tracking-wide mb-3">
             Overview
           </h2>
           <table className="w-full text-sm border-collapse">
@@ -390,65 +430,98 @@ export default function BookClubDashboard({ club, members, books, currentMember,
               </tr>
             </thead>
             <tbody>
-              {books.map((book) => {
-                const avg = average(book)
-                return (
-                  <tr
-                    key={book.id}
-                    className="border-t border-gray-100"
-                    style={{ backgroundColor: yearRowBg(years, book.month_label) }}
-                  >
-                    <td className="py-2 pr-3 font-bold whitespace-nowrap" style={{ color: yearColor(years, book.month_label) }}>
-                      {book.month_label}
-                    </td>
-                    <td className="py-2 pr-3 font-medium text-gray-900">
-                      {book.purchase_link ? (
-                        <a
-                          href={book.purchase_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:underline"
-                        >
-                          {book.title}
-                        </a>
-                      ) : (
-                        book.title
-                      )}
-                    </td>
-                    {members.map((m) => {
-                      const s = book.scores?.find((sc) => sc.club_member_id === m.id)
-                      return (
-                        <td
-                          key={m.id}
-                          className="py-2 px-2 text-center font-medium"
-                          style={{ color: memberColor(members, m.id) }}
-                        >
-                          {s ? Number(s.score).toFixed(1) : '—'}
+              {(() => {
+                const rows: React.ReactNode[] = []
+                const colCount = members.length + 4
+                let lastYear: string | null = null
+
+                books.forEach((book, i) => {
+                  const year = extractYear(book.month_label)
+
+                  if (year !== lastYear) {
+                    lastYear = year
+                    const collapsed = collapsedYears.has(year)
+                    const count = books.filter((b) => extractYear(b.month_label) === year).length
+                    rows.push(
+                      <tr key={`year-${year}`} className="border-t border-gray-200">
+                        <td colSpan={colCount} className="py-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleYear(year)}
+                            className="flex items-center gap-2 text-base font-extrabold"
+                            style={{ color: yearColor(years, book.month_label) }}
+                          >
+                            <span>{collapsed ? '▶' : '▼'}</span>
+                            {year} ({count})
+                          </button>
                         </td>
-                      )
-                    })}
-                    <td className="py-2 pl-2 text-center font-semibold" style={{ color: WINE }}>
-                      {avg !== null ? avg.toFixed(1) : '—'}
-                    </td>
-                    <td className="py-2 pl-3 text-xs text-gray-500 min-w-[200px]">
-                      {book.comments && book.comments.length > 0 ? (
-                        <div className="space-y-0.5">
-                          {book.comments.map((c) => (
-                            <div key={c.id}>
-                              <span className="font-semibold" style={{ color: memberColor(members, c.club_member_id) }}>
-                                {memberName(members, c.club_member_id)}:
-                              </span>{' '}
-                              {c.comment}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
+                      </tr>
+                    )
+                  }
+
+                  if (collapsedYears.has(year)) return
+
+                  const avg = average(book)
+                  rows.push(
+                    <tr
+                      key={book.id}
+                      className="border-t border-gray-100"
+                      style={{ backgroundColor: rowBanding[i] ? yearRowBg(years, book.month_label) : '#FFFFFF' }}
+                    >
+                      <td className="py-2 pr-3 font-bold whitespace-nowrap" style={{ color: yearColor(years, book.month_label) }}>
+                        {book.month_label}
+                      </td>
+                      <td className="py-2 pr-3 font-medium text-gray-900">
+                        {book.purchase_link ? (
+                          <a
+                            href={book.purchase_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline"
+                          >
+                            {book.title}
+                          </a>
+                        ) : (
+                          book.title
+                        )}
+                      </td>
+                      {members.map((m) => {
+                        const s = book.scores?.find((sc) => sc.club_member_id === m.id)
+                        return (
+                          <td
+                            key={m.id}
+                            className="py-2 px-2 text-center font-medium"
+                            style={{ color: memberColor(members, m.id) }}
+                          >
+                            {s ? Number(s.score).toFixed(1) : '—'}
+                          </td>
+                        )
+                      })}
+                      <td className="py-2 pl-2 text-center font-semibold" style={{ color: WINE }}>
+                        {avg !== null ? avg.toFixed(1) : '—'}
+                      </td>
+                      <td className="py-2 pl-3 text-xs text-gray-500 min-w-[200px]">
+                        {book.comments && book.comments.length > 0 ? (
+                          <div className="space-y-0.5">
+                            {book.comments.map((c) => (
+                              <div key={c.id}>
+                                <span className="font-semibold" style={{ color: memberColor(members, c.club_member_id) }}>
+                                  {memberName(members, c.club_member_id)}:
+                                </span>{' '}
+                                {c.comment}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })
+
+                return rows
+              })()}
             </tbody>
           </table>
         </div>
@@ -534,104 +607,137 @@ export default function BookClubDashboard({ club, members, books, currentMember,
         )}
       </div>
 
+      {books.length > 0 && (
+        <h2 className="text-lg font-bold text-gray-700 uppercase tracking-wide mt-8 mb-3">My Books</h2>
+      )}
+
       <div className="space-y-3">
         {books.length === 0 && (
           <p className="text-sm text-gray-500 text-center py-10">No books yet — add your first pick above.</p>
         )}
 
-        {books.map((book) => {
-          const myScore = book.scores?.find((s) => s.club_member_id === currentMember.id)
-          const myComment = book.comments?.find((c) => c.club_member_id === currentMember.id)
-          const avg = average(book)
-          const expanded = expandedBookId === book.id
+        {(() => {
+          const nodes: React.ReactNode[] = []
+          let lastYear: string | null = null
 
-          return (
-            <div key={book.id} className="bg-white rounded-2xl border border-rose-100 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-bold uppercase tracking-wide" style={{ color: yearColor(years, book.month_label) }}>
-                    {book.month_label}
-                  </p>
-                  <h2 className="font-semibold text-gray-900">{book.title}</h2>
-                  {book.author && <p className="text-sm text-gray-500">{book.author}</p>}
-                  {book.picked_by && (
-                    <p className="text-xs text-gray-400 mt-1">Picked by {book.picked_by}</p>
-                  )}
-                  {book.purchase_link && (
-                    <a
-                      href={book.purchase_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs hover:underline"
-                      style={{ color: WINE }}
-                    >
-                      View on Amazon ↗
-                    </a>
-                  )}
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-2xl font-bold" style={{ color: WINE }}>
-                    {avg !== null ? avg.toFixed(1) : '—'}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {book.scores?.length ?? 0}/{members.length} scored
-                  </p>
-                </div>
-              </div>
+          books.forEach((book) => {
+            const year = extractYear(book.month_label)
 
-              <div className="mt-4 flex items-center gap-3">
-                <label className="text-xs font-medium text-gray-500 shrink-0">Your score</label>
-                <input
-                  type="number"
-                  min={0}
-                  max={10}
-                  step={0.5}
-                  defaultValue={myScore?.score ?? ''}
-                  onBlur={(e) => handleScoreChange(book.id, e.target.value)}
-                  disabled={saving === book.id}
-                  className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
-                />
+            if (year !== lastYear) {
+              lastYear = year
+              const collapsed = collapsedBookYears.has(year)
+              const count = books.filter((b) => extractYear(b.month_label) === year).length
+              nodes.push(
                 <button
-                  onClick={() => setExpandedBookId(expanded ? null : book.id)}
-                  className="text-xs text-gray-500 hover:text-[#7B1E3A] ml-auto"
+                  key={`book-year-${year}`}
+                  type="button"
+                  onClick={() => toggleBookYear(year)}
+                  className="flex items-center gap-2 text-sm font-bold pt-2"
+                  style={{ color: yearColor(years, book.month_label) }}
                 >
-                  {expanded ? 'Hide scores' : 'See everyone\'s scores'}
+                  <span>{collapsed ? '▶' : '▼'}</span>
+                  {year} ({count})
                 </button>
-              </div>
+              )
+            }
 
-              <div className="mt-2 flex items-center gap-3">
-                <label className="text-xs font-medium text-gray-500 shrink-0">Your comment</label>
-                <input
-                  type="text"
-                  defaultValue={myComment?.comment ?? ''}
-                  onBlur={(e) => handleCommentChange(book.id, e.target.value)}
-                  disabled={saving === `comment-${book.id}`}
-                  placeholder="Optional thoughts..."
-                  className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
-                />
-              </div>
+            if (collapsedBookYears.has(year)) return
 
-              {expanded && (
-                <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
-                  {members.map((m) => {
-                    const s = book.scores?.find((sc) => sc.club_member_id === m.id)
-                    const c = book.comments?.find((cm) => cm.club_member_id === m.id)
-                    const color = memberColor(members, m.id)
-                    return (
-                      <div key={m.id} className="text-sm">
-                        <div className="flex justify-between">
-                          <span className="font-semibold" style={{ color }}>{memberName(members, m.id)}</span>
-                          <span className="font-medium" style={{ color }}>{s ? Number(s.score).toFixed(1) : '—'}</span>
-                        </div>
-                        {c && <p className="text-xs text-gray-500 italic mt-0.5">&ldquo;{c.comment}&rdquo;</p>}
-                      </div>
-                    )
-                  })}
+            const myScore = book.scores?.find((s) => s.club_member_id === currentMember.id)
+            const myComment = book.comments?.find((c) => c.club_member_id === currentMember.id)
+            const avg = average(book)
+            const expanded = expandedBookId === book.id
+
+            nodes.push(
+              <div key={book.id} className="bg-white rounded-2xl border border-rose-100 p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-wide" style={{ color: yearColor(years, book.month_label) }}>
+                      {book.month_label}
+                    </p>
+                    <h2 className="font-semibold text-gray-900">{book.title}</h2>
+                    {book.author && <p className="text-sm text-gray-500">{book.author}</p>}
+                    {book.picked_by && (
+                      <p className="text-xs text-gray-400 mt-1">Picked by {book.picked_by}</p>
+                    )}
+                    {book.purchase_link && (
+                      <a
+                        href={book.purchase_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs hover:underline"
+                        style={{ color: WINE }}
+                      >
+                        View on Amazon ↗
+                      </a>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-2xl font-bold" style={{ color: WINE }}>
+                      {avg !== null ? avg.toFixed(1) : '—'}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {book.scores?.length ?? 0}/{members.length} scored
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
-          )
-        })}
+
+                <div className="mt-4 flex items-center gap-3">
+                  <label className="text-xs font-medium text-gray-500 shrink-0">Your score</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.5}
+                    defaultValue={myScore?.score ?? ''}
+                    onBlur={(e) => handleScoreChange(book.id, e.target.value)}
+                    disabled={saving === book.id}
+                    className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+                  />
+                  <button
+                    onClick={() => setExpandedBookId(expanded ? null : book.id)}
+                    className="text-xs text-gray-500 hover:text-[#7B1E3A] ml-auto"
+                  >
+                    {expanded ? 'Hide scores' : 'See everyone\'s scores'}
+                  </button>
+                </div>
+
+                <div className="mt-2 flex items-center gap-3">
+                  <label className="text-xs font-medium text-gray-500 shrink-0">Your comment</label>
+                  <input
+                    type="text"
+                    defaultValue={myComment?.comment ?? ''}
+                    onBlur={(e) => handleCommentChange(book.id, e.target.value)}
+                    disabled={saving === `comment-${book.id}`}
+                    placeholder="Optional thoughts..."
+                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+                  />
+                </div>
+
+                {expanded && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                    {members.map((m) => {
+                      const s = book.scores?.find((sc) => sc.club_member_id === m.id)
+                      const c = book.comments?.find((cm) => cm.club_member_id === m.id)
+                      const color = memberColor(members, m.id)
+                      return (
+                        <div key={m.id} className="text-sm">
+                          <div className="flex justify-between">
+                            <span className="font-semibold" style={{ color }}>{memberName(members, m.id)}</span>
+                            <span className="font-medium" style={{ color }}>{s ? Number(s.score).toFixed(1) : '—'}</span>
+                          </div>
+                          {c && <p className="text-xs text-gray-500 italic mt-0.5">&ldquo;{c.comment}&rdquo;</p>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })
+
+          return nodes
+        })()}
       </div>
 
       {pastMeetings.length > 0 && (
