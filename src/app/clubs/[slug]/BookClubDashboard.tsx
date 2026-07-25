@@ -29,6 +29,16 @@ function extractYear(monthLabel: string): string {
   return monthLabel.match(/\d{4}/)?.[0] ?? ''
 }
 
+const MONTH_ABBR: Record<string, string> = {
+  January: 'Jan', February: 'Feb', March: 'Mar', April: 'Apr', May: 'May', June: 'Jun',
+  July: 'Jul', August: 'Aug', September: 'Sep', October: 'Oct', November: 'Nov', December: 'Dec',
+}
+
+function abbreviateMonth(monthLabel: string): string {
+  const [month, year] = monthLabel.split(' ')
+  return year ? `${MONTH_ABBR[month] ?? month} ${year}` : monthLabel
+}
+
 function uniqueYearsDesc(books: Book[]): string[] {
   return Array.from(new Set(books.map((b) => extractYear(b.month_label)))).sort((a, b) => b.localeCompare(a))
 }
@@ -469,7 +479,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                       style={{ backgroundColor: rowBanding[i] ? yearRowBg(years, book.month_label) : '#FFFFFF' }}
                     >
                       <td className="py-2 pr-3 font-bold whitespace-nowrap" style={{ color: yearColor(years, book.month_label) }}>
-                        {book.month_label}
+                        {abbreviateMonth(book.month_label)}
                       </td>
                       <td className="py-2 pr-3 font-medium text-gray-900">
                         {book.purchase_link ? (
