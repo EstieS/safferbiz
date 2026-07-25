@@ -109,6 +109,9 @@ export default function BookClubDashboard({ club, members, books, currentMember,
   const rowBanding = computeRowBanding(books)
   const [showAddBook, setShowAddBook] = useState(false)
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null)
+  const [editingBookId, setEditingBookId] = useState<string | null>(null)
+  const [draftScore, setDraftScore] = useState('')
+  const [draftComment, setDraftComment] = useState('')
   const [saving, setSaving] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -217,64 +220,66 @@ export default function BookClubDashboard({ club, members, books, currentMember,
     router.refresh()
   }
 
-  async function handleScoreChange(bookId: string, score: string) {
-    const value = Number(score)
-    if (!score || Number.isNaN(value)) return
+  function startEditingBook(book: Book) {
+    const myScore = book.scores?.find((s) => s.club_member_id === currentMember.id)
+    const myComment = book.comments?.find((c) => c.club_member_id === currentMember.id)
+    setDraftScore(myScore ? String(myScore.score) : '')
+    setDraftComment(myComment?.comment ?? '')
+    setEditingBookId(book.id)
+  }
 
+  function cancelEditingBook() {
+    setEditingBookId(null)
+  }
+
+  async function handleSaveBook(bookId: string) {
     setSaving(bookId)
     setErrorMsg('')
     const supabase = createClient()
 
-    const { error } = await supabase
-      .from('book_scores')
-      .upsert(
-        { book_id: bookId, club_member_id: currentMember.id, score: value },
-        { onConflict: 'book_id,club_member_id' }
-      )
-
-    setSaving(null)
-    if (error) {
-      setErrorMsg(error.message)
-      return
+    const scoreValue = Number(draftScore)
+    if (draftScore.trim() && !Number.isNaN(scoreValue)) {
+      const { error } = await supabase
+        .from('book_scores')
+        .upsert(
+          { book_id: bookId, club_member_id: currentMember.id, score: scoreValue },
+          { onConflict: 'book_id,club_member_id' }
+        )
+      if (error) {
+        setSaving(null)
+        setErrorMsg(error.message)
+        return
+      }
     }
-    router.refresh()
-  }
 
-  async function handleCommentChange(bookId: string, comment: string) {
-    const trimmed = comment.trim()
-
-    setSaving(`comment-${bookId}`)
-    setErrorMsg('')
-    const supabase = createClient()
-
-    if (!trimmed) {
+    const trimmedComment = draftComment.trim()
+    if (trimmedComment) {
+      const { error } = await supabase
+        .from('book_comments')
+        .upsert(
+          { book_id: bookId, club_member_id: currentMember.id, comment: trimmedComment },
+          { onConflict: 'book_id,club_member_id' }
+        )
+      if (error) {
+        setSaving(null)
+        setErrorMsg(error.message)
+        return
+      }
+    } else {
       const { error } = await supabase
         .from('book_comments')
         .delete()
         .eq('book_id', bookId)
         .eq('club_member_id', currentMember.id)
-
-      setSaving(null)
       if (error) {
+        setSaving(null)
         setErrorMsg(error.message)
         return
       }
-      router.refresh()
-      return
     }
-
-    const { error } = await supabase
-      .from('book_comments')
-      .upsert(
-        { book_id: bookId, club_member_id: currentMember.id, comment: trimmed },
-        { onConflict: 'book_id,club_member_id' }
-      )
 
     setSaving(null)
-    if (error) {
-      setErrorMsg(error.message)
-      return
-    }
+    setEditingBookId(null)
     router.refresh()
   }
 
@@ -425,7 +430,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
             <thead>
               <tr className="text-left text-gray-400 text-xs uppercase">
                 <th className="pb-2 pr-3 font-medium">Month</th>
-                <th className="pb-2 pr-3 font-medium">Book</th>
+                <th className="pb-2 pr-3 font-medium min-w-[220px]">Book</th>
                 {members.map((m) => (
                   <th
                     key={m.id}
@@ -481,7 +486,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                       <td className="py-2 pr-3 font-bold whitespace-nowrap" style={{ color: yearColor(years, book.month_label) }}>
                         {abbreviateMonth(book.month_label)}
                       </td>
-                      <td className="py-2 pr-3 font-medium text-gray-900">
+                      <td className="py-2 pr-3 font-medium text-gray-900 text-[13px] leading-snug min-w-[220px]">
                         {book.purchase_link ? (
                           <a
                             href={book.purchase_link}
@@ -692,37 +697,76 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center gap-3">
-                  <label className="text-xs font-medium text-gray-500 shrink-0">Your score</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={10}
-                    step={0.5}
-                    defaultValue={myScore?.score ?? ''}
-                    onBlur={(e) => handleScoreChange(book.id, e.target.value)}
-                    disabled={saving === book.id}
-                    className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
-                  />
-                  <button
-                    onClick={() => setExpandedBookId(expanded ? null : book.id)}
-                    className="text-xs text-gray-500 hover:text-[#7B1E3A] ml-auto"
-                  >
-                    {expanded ? 'Hide scores' : 'See everyone\'s scores'}
-                  </button>
-                </div>
-
-                <div className="mt-2 flex items-center gap-3">
-                  <label className="text-xs font-medium text-gray-500 shrink-0">Your comment</label>
-                  <input
-                    type="text"
-                    defaultValue={myComment?.comment ?? ''}
-                    onBlur={(e) => handleCommentChange(book.id, e.target.value)}
-                    disabled={saving === `comment-${book.id}`}
-                    placeholder="Optional thoughts..."
-                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
-                  />
-                </div>
+                {editingBookId === book.id ? (
+                  <>
+                    <div className="mt-4 flex items-center gap-3">
+                      <label className="text-xs font-medium text-gray-500 shrink-0">Your score</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={10}
+                        step={0.5}
+                        value={draftScore}
+                        onChange={(e) => setDraftScore(e.target.value)}
+                        className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+                      />
+                    </div>
+                    <div className="mt-2 flex items-center gap-3">
+                      <label className="text-xs font-medium text-gray-500 shrink-0">Your comment</label>
+                      <input
+                        type="text"
+                        value={draftComment}
+                        onChange={(e) => setDraftComment(e.target.value)}
+                        placeholder="Optional thoughts..."
+                        className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+                      />
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        onClick={() => handleSaveBook(book.id)}
+                        disabled={saving === book.id}
+                        className="px-4 py-1.5 rounded-lg text-white font-medium text-sm disabled:opacity-60"
+                        style={{ backgroundColor: WINE }}
+                      >
+                        {saving === book.id ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={cancelEditingBook}
+                        className="px-4 py-1.5 rounded-lg text-gray-600 text-sm hover:bg-gray-100"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => setExpandedBookId(expanded ? null : book.id)}
+                        className="text-xs text-gray-500 hover:text-[#7B1E3A] ml-auto"
+                      >
+                        {expanded ? 'Hide scores' : 'See everyone\'s scores'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-4 flex items-center gap-4 flex-wrap">
+                    <p className="text-sm text-gray-600">
+                      Your score: <span className="font-semibold">{myScore ? Number(myScore.score).toFixed(1) : '—'}</span>
+                    </p>
+                    {myComment && (
+                      <p className="text-sm text-gray-500 italic">&ldquo;{myComment.comment}&rdquo;</p>
+                    )}
+                    <button
+                      onClick={() => startEditingBook(book)}
+                      className="text-xs font-medium hover:underline"
+                      style={{ color: WINE }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setExpandedBookId(expanded ? null : book.id)}
+                      className="text-xs text-gray-500 hover:text-[#7B1E3A] ml-auto"
+                    >
+                      {expanded ? 'Hide scores' : 'See everyone\'s scores'}
+                    </button>
+                  </div>
+                )}
 
                 {expanded && (
                   <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
