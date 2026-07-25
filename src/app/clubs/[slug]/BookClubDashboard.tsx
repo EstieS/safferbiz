@@ -22,6 +22,29 @@ function memberColor(members: ClubMember[], clubMemberId: string): string {
   return MEMBER_COLORS[idx % MEMBER_COLORS.length] ?? '#374151'
 }
 
+const YEAR_COLORS = ['#7B1E3A', '#9C6B4E', '#4A6D7C', '#6B5B73', '#7A6A2E']
+const YEAR_ROW_BG = ['#FDF2F5', '#F7F1EC', '#EFF4F6', '#F3F1F5', '#F7F5EC']
+
+function extractYear(monthLabel: string): string {
+  return monthLabel.match(/\d{4}/)?.[0] ?? ''
+}
+
+function uniqueYearsDesc(books: Book[]): string[] {
+  return Array.from(new Set(books.map((b) => extractYear(b.month_label)))).sort((a, b) => b.localeCompare(a))
+}
+
+function yearIndex(years: string[], monthLabel: string): number {
+  return years.indexOf(extractYear(monthLabel))
+}
+
+function yearColor(years: string[], monthLabel: string): string {
+  return YEAR_COLORS[yearIndex(years, monthLabel) % YEAR_COLORS.length] ?? WINE
+}
+
+function yearRowBg(years: string[], monthLabel: string): string {
+  return YEAR_ROW_BG[yearIndex(years, monthLabel) % YEAR_ROW_BG.length] ?? '#FFFFFF'
+}
+
 interface Props {
   club: Club
   members: ClubMember[]
@@ -60,6 +83,7 @@ function formatMeetingDate(iso: string): string {
 
 export default function BookClubDashboard({ club, members, books, currentMember, nextMeeting, pastMeetings }: Props) {
   const router = useRouter()
+  const years = uniqueYearsDesc(books)
   const [showAddBook, setShowAddBook] = useState(false)
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null)
   const [saving, setSaving] = useState<string | null>(null)
@@ -362,14 +386,19 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                   </th>
                 ))}
                 <th className="pb-2 pl-2 font-medium text-center">Avg</th>
+                <th className="pb-2 pl-3 font-medium text-left">Comments</th>
               </tr>
             </thead>
             <tbody>
               {books.map((book) => {
                 const avg = average(book)
                 return (
-                  <tr key={book.id} className="border-t border-gray-100">
-                    <td className="py-2 pr-3 font-bold whitespace-nowrap" style={{ color: WINE }}>
+                  <tr
+                    key={book.id}
+                    className="border-t border-gray-100"
+                    style={{ backgroundColor: yearRowBg(years, book.month_label) }}
+                  >
+                    <td className="py-2 pr-3 font-bold whitespace-nowrap" style={{ color: yearColor(years, book.month_label) }}>
                       {book.month_label}
                     </td>
                     <td className="py-2 pr-3 font-medium text-gray-900">
@@ -400,6 +429,22 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                     })}
                     <td className="py-2 pl-2 text-center font-semibold" style={{ color: WINE }}>
                       {avg !== null ? avg.toFixed(1) : '—'}
+                    </td>
+                    <td className="py-2 pl-3 text-xs text-gray-500 min-w-[200px]">
+                      {book.comments && book.comments.length > 0 ? (
+                        <div className="space-y-0.5">
+                          {book.comments.map((c) => (
+                            <div key={c.id}>
+                              <span className="font-semibold" style={{ color: memberColor(members, c.club_member_id) }}>
+                                {memberName(members, c.club_member_id)}:
+                              </span>{' '}
+                              {c.comment}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                   </tr>
                 )
@@ -504,7 +549,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
             <div key={book.id} className="bg-white rounded-2xl border border-rose-100 p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-bold uppercase tracking-wide" style={{ color: WINE }}>
+                  <p className="text-sm font-bold uppercase tracking-wide" style={{ color: yearColor(years, book.month_label) }}>
                     {book.month_label}
                   </p>
                   <h2 className="font-semibold text-gray-900">{book.title}</h2>
