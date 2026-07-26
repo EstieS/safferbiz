@@ -622,7 +622,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
       </div>
 
       {books.length > 0 && (
-        <h2 className="text-lg font-bold text-gray-700 uppercase tracking-wide mt-8 mb-3">My Books</h2>
+        <h2 className="text-lg font-bold text-gray-700 uppercase tracking-wide mt-8 mb-3">My Ratings</h2>
       )}
 
       <div className="space-y-3">
