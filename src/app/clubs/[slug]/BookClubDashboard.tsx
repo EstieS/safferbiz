@@ -293,7 +293,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
 
   return (
     <div className="bg-gradient-to-b from-rose-50 via-white to-amber-50">
-      <div className="max-w-3xl mx-auto px-4 py-10">
+      <div className="max-w-4xl mx-auto px-4 py-10">
       <div className="flex items-start justify-between mb-2">
         <div>
           <h1 className={`${script.className} text-4xl`} style={{ color: WINE }}>
@@ -431,7 +431,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
             <thead>
               <tr className="text-left text-gray-400 text-xs uppercase">
                 <th className="pb-2 pr-3 font-medium">Month</th>
-                <th className="pb-2 pr-3 font-medium min-w-[220px]">Book</th>
+                <th className="pb-2 pr-3 font-medium min-w-[160px]">Book</th>
                 {members.map((m) => (
                   <th
                     key={m.id}
@@ -487,7 +487,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                       <td className="py-2 pr-3 font-bold whitespace-nowrap" style={{ color: yearColor(years, book.month_label) }}>
                         {abbreviateMonth(book.month_label)}
                       </td>
-                      <td className="py-2 pr-3 font-medium text-gray-900 text-[13px] leading-snug min-w-[220px]">
+                      <td className="py-2 pr-3 font-medium text-gray-900 text-[13px] leading-snug min-w-[160px]">
                         {book.purchase_link ? (
                           <a
                             href={book.purchase_link}
