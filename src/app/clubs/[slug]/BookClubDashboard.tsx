@@ -87,12 +87,6 @@ function memberName(members: ClubMember[], clubMemberId: string): string {
   return members.find((m) => m.id === clubMemberId)?.display_name ?? 'Unknown'
 }
 
-function toLocalInputValue(iso: string): string {
-  const d = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
 function formatMeetingDate(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
     weekday: 'long',
@@ -115,9 +109,37 @@ function formatZoneTime(iso: string, timeZone: string): string {
   return new Date(iso).toLocaleString('en-US', {
     timeZone,
     weekday: 'short',
+    month: 'short',
+    day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
   })
+}
+
+// Converts a "YYYY-MM-DDTHH:mm" wall-clock string, understood to be in `timeZone`,
+// into the correct UTC instant (handles each zone's DST offset at that date).
+function zonedTimeToUtcIso(localDateTime: string, timeZone: string): string {
+  const guess = new Date(`${localDateTime}:00Z`)
+  const asTz = new Date(guess.toLocaleString('en-US', { timeZone }))
+  const asUtc = new Date(guess.toLocaleString('en-US', { timeZone: 'UTC' }))
+  const diff = asUtc.getTime() - asTz.getTime()
+  return new Date(guess.getTime() + diff).toISOString()
+}
+
+// Inverse of the above: renders a UTC ISO instant as a "YYYY-MM-DDTHH:mm" wall-clock
+// string for `timeZone`, suitable for a <input type="datetime-local"> value.
+function utcToZonedInputValue(iso: string, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(iso))
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
 }
 
 function currentMonthLabel(): string {
@@ -164,6 +186,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
 
   const [editingMeeting, setEditingMeeting] = useState(false)
   const [meetingAt, setMeetingAt] = useState('')
+  const [meetingTimezone, setMeetingTimezone] = useState(MEETING_TIMEZONES[0].zone)
   const [meetingZoomLink, setMeetingZoomLink] = useState('')
   const [meetingBookId, setMeetingBookId] = useState('')
   const [showHistory, setShowHistory] = useState(false)
@@ -236,7 +259,9 @@ export default function BookClubDashboard({ club, members, books, currentMember,
   }
 
   function openMeetingForm() {
-    setMeetingAt(nextMeeting ? toLocalInputValue(nextMeeting.meeting_at) : '')
+    const zone = MEETING_TIMEZONES[0].zone
+    setMeetingAt(nextMeeting ? utcToZonedInputValue(nextMeeting.meeting_at, zone) : '')
+    setMeetingTimezone(zone)
     setMeetingZoomLink(nextMeeting?.zoom_link ?? '')
     setMeetingBookId(nextMeeting?.book_id ?? books[0]?.id ?? '')
     setEditingMeeting(true)
@@ -253,7 +278,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
     const payload = {
       club_id: club.id,
       book_id: meetingBookId || null,
-      meeting_at: new Date(meetingAt).toISOString(),
+      meeting_at: zonedTimeToUtcIso(meetingAt, meetingTimezone),
       zoom_link: meetingZoomLink.trim() || null,
     }
 
@@ -357,6 +382,15 @@ export default function BookClubDashboard({ club, members, books, currentMember,
           </p>
         </div>
         <div className="flex items-center gap-4 shrink-0">
+          {!showAddBook && (
+            <button
+              onClick={() => setShowAddBook(true)}
+              className="px-4 py-2 rounded-lg text-white font-medium text-sm"
+              style={{ backgroundColor: WINE }}
+            >
+              + Add a book
+            </button>
+          )}
           <Link href={`/clubs/${club.slug}/account`} className="text-sm text-gray-500 hover:text-[#7B1E3A]">
             Change password
           </Link>
@@ -367,6 +401,76 @@ export default function BookClubDashboard({ club, members, books, currentMember,
       </div>
 
       {errorMsg && <p className="text-sm text-red-600 mt-3">{errorMsg}</p>}
+
+      {showAddBook && (
+        <form onSubmit={handleAddBook} className="mt-4 bg-white rounded-2xl border border-rose-100 p-6 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Month</label>
+              <input
+                required
+                value={monthLabel}
+                onChange={(e) => setMonthLabel(e.target.value)}
+                placeholder="July 2026"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Picked by</label>
+              <input
+                value={pickedBy}
+                onChange={(e) => setPickedBy(e.target.value)}
+                placeholder="Optional"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Title</label>
+            <input
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Author</label>
+            <input
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Amazon link</label>
+            <input
+              type="url"
+              value={purchaseLink}
+              onChange={(e) => setPurchaseLink(e.target.value)}
+              placeholder="https://amazon.com/..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+            />
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button
+              type="submit"
+              disabled={saving === 'new-book'}
+              className="px-4 py-2 rounded-lg text-white font-medium text-sm disabled:opacity-60"
+              style={{ backgroundColor: WINE }}
+            >
+              {saving === 'new-book' ? 'Saving...' : 'Save book'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddBook(false)}
+              className="px-4 py-2 rounded-lg text-gray-600 text-sm hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       <div className="mt-6 rounded-2xl p-5 shadow-lg" style={{ backgroundColor: WINE }}>
         <h2 className="text-xs font-semibold uppercase tracking-wide mb-2 text-white/70">
@@ -387,20 +491,42 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Book</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Timezone</label>
                 <select
-                  value={meetingBookId}
-                  onChange={(e) => setMeetingBookId(e.target.value)}
+                  required
+                  value={meetingTimezone}
+                  onChange={(e) => {
+                    const newZone = e.target.value
+                    if (meetingAt) {
+                      const instant = zonedTimeToUtcIso(meetingAt, meetingTimezone)
+                      setMeetingAt(utcToZonedInputValue(instant, newZone))
+                    }
+                    setMeetingTimezone(newZone)
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
                 >
-                  <option value="">No book selected</option>
-                  {books.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.month_label} — {b.title}
+                  {MEETING_TIMEZONES.map(({ label, zone }) => (
+                    <option key={zone} value={zone}>
+                      {label}
                     </option>
                   ))}
                 </select>
               </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Book</label>
+              <select
+                value={meetingBookId}
+                onChange={(e) => setMeetingBookId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+              >
+                <option value="">No book selected</option>
+                {books.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.month_label} — {b.title}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Zoom link</label>
@@ -435,17 +561,14 @@ export default function BookClubDashboard({ club, members, books, currentMember,
             <div className="flex items-start justify-between flex-wrap gap-3">
               <div>
                 {nextMeeting ? (
-                  <>
-                    <p className="text-lg font-semibold text-white">{formatMeetingDate(nextMeeting.meeting_at)}</p>
-                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                      {MEETING_TIMEZONES.map(({ label, zone }) => (
-                        <p key={zone} className="text-xs text-white/70">
-                          <span className="font-semibold text-white/90">{label}:</span>{' '}
-                          {formatZoneTime(nextMeeting.meeting_at, zone)}
-                        </p>
-                      ))}
-                    </div>
-                  </>
+                  <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+                    {MEETING_TIMEZONES.map(({ label, zone }) => (
+                      <p key={zone} className="text-sm">
+                        <span className="font-semibold text-white/70">{label}:</span>{' '}
+                        <span className="font-semibold text-white">{formatZoneTime(nextMeeting.meeting_at, zone)}</span>
+                      </p>
+                    ))}
+                  </div>
                 ) : (
                   <p className="text-sm text-white/70">No meeting scheduled yet.</p>
                 )}
@@ -612,86 +735,6 @@ export default function BookClubDashboard({ club, members, books, currentMember,
           </table>
         </div>
       )}
-
-      <div className="mt-6 mb-4">
-        {!showAddBook ? (
-          <button
-            onClick={() => setShowAddBook(true)}
-            className="px-4 py-2 rounded-lg text-white font-medium text-sm"
-            style={{ backgroundColor: WINE }}
-          >
-            + Add a book
-          </button>
-        ) : (
-          <form onSubmit={handleAddBook} className="bg-white rounded-2xl border border-rose-100 p-6 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Month</label>
-                <input
-                  required
-                  value={monthLabel}
-                  onChange={(e) => setMonthLabel(e.target.value)}
-                  placeholder="July 2026"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Picked by</label>
-                <input
-                  value={pickedBy}
-                  onChange={(e) => setPickedBy(e.target.value)}
-                  placeholder="Optional"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Title</label>
-              <input
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Author</label>
-              <input
-                value={author}
-                onChange={(e) => setAuthor(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Amazon link</label>
-              <input
-                type="url"
-                value={purchaseLink}
-                onChange={(e) => setPurchaseLink(e.target.value)}
-                placeholder="https://amazon.com/..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
-              />
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button
-                type="submit"
-                disabled={saving === 'new-book'}
-                className="px-4 py-2 rounded-lg text-white font-medium text-sm disabled:opacity-60"
-                style={{ backgroundColor: WINE }}
-              >
-                {saving === 'new-book' ? 'Saving...' : 'Save book'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAddBook(false)}
-                className="px-4 py-2 rounded-lg text-gray-600 text-sm hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
 
       {books.length > 0 && (
         <h2 className="text-lg font-bold text-gray-700 uppercase tracking-wide mt-8 mb-3">My Ratings</h2>
