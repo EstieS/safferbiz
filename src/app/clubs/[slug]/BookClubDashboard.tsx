@@ -117,9 +117,6 @@ const MEETING_TIMEZONES = [
 function formatZoneTime(iso: string, timeZone: string): string {
   return new Date(iso).toLocaleString('en-US', {
     timeZone,
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
   })
