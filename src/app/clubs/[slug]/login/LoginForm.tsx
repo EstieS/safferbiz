@@ -29,6 +29,7 @@ export default function LoginForm({ slug }: { slug: string }) {
       setErrorMsg('Invalid email or password.')
       setState('error')
     } else {
+      sessionStorage.setItem('showWelcomeQuote', '1')
       router.push(`/clubs/${slug}`)
       router.refresh()
     }

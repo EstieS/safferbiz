@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Dancing_Script } from 'next/font/google'
 import { createClient } from '@/lib/supabase'
+import { getRandomQuote } from '@/lib/bookClubQuotes'
 import type { Club, ClubMember, Book, ClubMeeting } from '@/lib/types'
 
 function firstName(name: string): string {
@@ -152,6 +153,14 @@ export default function BookClubDashboard({ club, members, books, currentMember,
   const [showHistory, setShowHistory] = useState(false)
   const [commentsModalBookId, setCommentsModalBookId] = useState<string | null>(null)
   const [collapsedYears, setCollapsedYears] = useState<Set<string>>(new Set())
+  const [welcomeQuote, setWelcomeQuote] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (sessionStorage.getItem('showWelcomeQuote')) {
+      sessionStorage.removeItem('showWelcomeQuote')
+      setWelcomeQuote(getRandomQuote())
+    }
+  }, [])
 
   function toggleYear(year: string) {
     setCollapsedYears((prev) => {
@@ -894,6 +903,34 @@ export default function BookClubDashboard({ club, members, books, currentMember,
           </div>
         )
       })()}
+
+      {welcomeQuote && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setWelcomeQuote(null)}
+        >
+          <div
+            className="rounded-2xl max-w-sm w-full p-8 text-center shadow-lg"
+            style={{ backgroundColor: WINE }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className={`${script.className} text-3xl text-white`}>
+              Hi {firstName(currentMember.display_name)}!
+            </p>
+            <p className="text-white/90 mt-4 text-sm leading-relaxed">
+              Always remember{' '}
+              <span className="italic">{welcomeQuote}</span>
+            </p>
+            <button
+              onClick={() => setWelcomeQuote(null)}
+              className="mt-6 px-5 py-2 rounded-lg font-medium text-sm bg-white"
+              style={{ color: WINE }}
+            >
+              📚 Cheers
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
