@@ -117,7 +117,6 @@ function formatZoneTime(iso: string, timeZone: string): string {
     weekday: 'short',
     hour: 'numeric',
     minute: '2-digit',
-    timeZoneName: 'short',
   })
 }
 
