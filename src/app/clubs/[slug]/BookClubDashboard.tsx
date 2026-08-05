@@ -98,6 +98,15 @@ function formatMeetingDate(iso: string): string {
   })
 }
 
+function formatMeetingDateOnly(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 const MEETING_TIMEZONES = [
   { label: 'USA Eastern', zone: 'America/New_York' },
   { label: 'UK', zone: 'Europe/London' },
@@ -561,14 +570,17 @@ export default function BookClubDashboard({ club, members, books, currentMember,
             <div className="flex items-start justify-between flex-wrap gap-3">
               <div>
                 {nextMeeting ? (
-                  <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-                    {MEETING_TIMEZONES.map(({ label, zone }) => (
-                      <p key={zone} className="text-sm">
-                        <span className="font-semibold text-white/70">{label}:</span>{' '}
-                        <span className="font-semibold text-white">{formatZoneTime(nextMeeting.meeting_at, zone)}</span>
-                      </p>
-                    ))}
-                  </div>
+                  <>
+                    <p className="text-lg font-semibold text-white">{formatMeetingDateOnly(nextMeeting.meeting_at)}</p>
+                    <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5">
+                      {MEETING_TIMEZONES.map(({ label, zone }) => (
+                        <p key={zone} className="text-sm">
+                          <span className="font-semibold text-white/70">{label}:</span>{' '}
+                          <span className="font-semibold text-white">{formatZoneTime(nextMeeting.meeting_at, zone)}</span>
+                        </p>
+                      ))}
+                    </div>
+                  </>
                 ) : (
                   <p className="text-sm text-white/70">No meeting scheduled yet.</p>
                 )}
