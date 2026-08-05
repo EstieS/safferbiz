@@ -103,8 +103,32 @@ function formatMeetingDate(iso: string): string {
   })
 }
 
+function currentMonthLabel(): string {
+  const now = new Date()
+  return `${now.toLocaleString('en-US', { month: 'long' })} ${now.getFullYear()}`
+}
+
+function BookLink({ book }: { book: Book | null | undefined }) {
+  if (!book) return <p className="text-sm text-white/60">—</p>
+  if (book.purchase_link) {
+    return (
+      <a
+        href={book.purchase_link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-sm font-medium text-white hover:underline"
+      >
+        {book.title} ↗
+      </a>
+    )
+  }
+  return <p className="text-sm font-medium text-white">{book.title}</p>
+}
+
 export default function BookClubDashboard({ club, members, books, currentMember, nextMeeting, pastMeetings }: Props) {
   const router = useRouter()
+  const currentBook = books.find((b) => b.month_label.trim() === currentMonthLabel()) ?? null
+  const nextBook = nextMeeting?.book_id ? books.find((b) => b.id === nextMeeting.book_id) ?? null : null
   const years = uniqueYearsDesc(books)
   const rowBanding = computeRowBanding(books)
   const [showAddBook, setShowAddBook] = useState(false)
@@ -319,13 +343,13 @@ export default function BookClubDashboard({ club, members, books, currentMember,
 
       {errorMsg && <p className="text-sm text-red-600 mt-3">{errorMsg}</p>}
 
-      <div className="mt-6 rounded-2xl border-2 p-5" style={{ borderColor: WINE, backgroundColor: '#FDF2F5' }}>
-        <h2 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: WINE }}>
+      <div className="mt-6 rounded-2xl p-5 shadow-lg" style={{ backgroundColor: WINE }}>
+        <h2 className="text-xs font-semibold uppercase tracking-wide mb-2 text-white/70">
           📅 Next Meeting
         </h2>
 
         {editingMeeting ? (
-          <form onSubmit={handleSaveMeeting} className="space-y-3">
+          <form onSubmit={handleSaveMeeting} className="space-y-3 bg-white rounded-xl p-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Date &amp; time</label>
@@ -375,50 +399,63 @@ export default function BookClubDashboard({ club, members, books, currentMember,
               <button
                 type="button"
                 onClick={() => setEditingMeeting(false)}
-                className="px-4 py-2 rounded-lg text-gray-600 text-sm hover:bg-white"
+                className="px-4 py-2 rounded-lg text-gray-600 text-sm hover:bg-gray-100"
               >
                 Cancel
               </button>
             </div>
           </form>
-        ) : nextMeeting ? (
-          <div className="flex items-start justify-between flex-wrap gap-3">
-            <div>
-              <p className="text-lg font-semibold text-gray-900">{formatMeetingDate(nextMeeting.meeting_at)}</p>
-              {nextMeeting.book_id && (
-                <p className="text-sm text-gray-600 mt-0.5">
-                  {books.find((b) => b.id === nextMeeting.book_id)?.title ?? ''}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              {nextMeeting.zoom_link && (
-                <a
-                  href={nextMeeting.zoom_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-lg text-white font-medium text-sm"
-                  style={{ backgroundColor: WINE }}
-                >
-                  Join Zoom ↗
-                </a>
-              )}
-              <button onClick={openMeetingForm} className="text-xs text-gray-500 hover:text-[#7B1E3A]">
-                Edit
-              </button>
-            </div>
-          </div>
         ) : (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500">No meeting scheduled yet.</p>
-            <button
-              onClick={openMeetingForm}
-              className="px-4 py-2 rounded-lg text-white font-medium text-sm"
-              style={{ backgroundColor: WINE }}
-            >
-              + Schedule
-            </button>
-          </div>
+          <>
+            <div className="flex items-start justify-between flex-wrap gap-3">
+              <div>
+                {nextMeeting ? (
+                  <p className="text-lg font-semibold text-white">{formatMeetingDate(nextMeeting.meeting_at)}</p>
+                ) : (
+                  <p className="text-sm text-white/70">No meeting scheduled yet.</p>
+                )}
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                {nextMeeting?.zoom_link && (
+                  <a
+                    href={nextMeeting.zoom_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 rounded-lg font-medium text-sm bg-white"
+                    style={{ color: WINE }}
+                  >
+                    Join Zoom ↗
+                  </a>
+                )}
+                {nextMeeting ? (
+                  <button onClick={openMeetingForm} className="text-xs text-white/70 hover:text-white">
+                    Edit
+                  </button>
+                ) : (
+                  <button
+                    onClick={openMeetingForm}
+                    className="px-4 py-2 rounded-lg font-medium text-sm bg-white"
+                    style={{ color: WINE }}
+                  >
+                    + Schedule
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {(currentBook || nextBook) && (
+              <div className="mt-4 pt-4 border-t border-white/20 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-white/60 mb-1">Current book</p>
+                  <BookLink book={currentBook} />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-white/60 mb-1">Next book</p>
+                  <BookLink book={nextBook} />
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
