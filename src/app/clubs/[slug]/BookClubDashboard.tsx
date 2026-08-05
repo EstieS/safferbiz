@@ -104,6 +104,23 @@ function formatMeetingDate(iso: string): string {
   })
 }
 
+const MEETING_TIMEZONES = [
+  { label: 'USA Eastern', zone: 'America/New_York' },
+  { label: 'UK', zone: 'Europe/London' },
+  { label: 'Netherlands', zone: 'Europe/Amsterdam' },
+  { label: 'Germany', zone: 'Europe/Berlin' },
+]
+
+function formatZoneTime(iso: string, timeZone: string): string {
+  return new Date(iso).toLocaleString('en-US', {
+    timeZone,
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  })
+}
+
 function currentMonthLabel(): string {
   const now = new Date()
   return `${now.toLocaleString('en-US', { month: 'long' })} ${now.getFullYear()}`
@@ -419,7 +436,17 @@ export default function BookClubDashboard({ club, members, books, currentMember,
             <div className="flex items-start justify-between flex-wrap gap-3">
               <div>
                 {nextMeeting ? (
-                  <p className="text-lg font-semibold text-white">{formatMeetingDate(nextMeeting.meeting_at)}</p>
+                  <>
+                    <p className="text-lg font-semibold text-white">{formatMeetingDate(nextMeeting.meeting_at)}</p>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                      {MEETING_TIMEZONES.map(({ label, zone }) => (
+                        <p key={zone} className="text-xs text-white/70">
+                          <span className="font-semibold text-white/90">{label}:</span>{' '}
+                          {formatZoneTime(nextMeeting.meeting_at, zone)}
+                        </p>
+                      ))}
+                    </div>
+                  </>
                 ) : (
                   <p className="text-sm text-white/70">No meeting scheduled yet.</p>
                 )}
@@ -910,21 +937,21 @@ export default function BookClubDashboard({ club, members, books, currentMember,
           onClick={() => setWelcomeQuote(null)}
         >
           <div
-            className="rounded-2xl max-w-sm w-full p-8 text-center shadow-lg"
-            style={{ backgroundColor: WINE }}
+            className="rounded-2xl max-w-sm w-full p-8 text-center shadow-lg border-2"
+            style={{ backgroundColor: '#FDF2F5', borderColor: WINE }}
             onClick={(e) => e.stopPropagation()}
           >
-            <p className={`${script.className} text-3xl text-white`}>
+            <p className={`${script.className} text-3xl`} style={{ color: WINE }}>
               Hi {firstName(currentMember.display_name)}!
             </p>
-            <p className="text-white/90 mt-4 text-sm leading-relaxed">
+            <p className="text-gray-600 mt-4 text-sm leading-relaxed">
               Always remember{' '}
               <span className="italic">{welcomeQuote}</span>
             </p>
             <button
               onClick={() => setWelcomeQuote(null)}
-              className="mt-6 px-5 py-2 rounded-lg font-medium text-sm bg-white"
-              style={{ color: WINE }}
+              className="mt-6 px-5 py-2 rounded-lg text-white font-medium text-sm"
+              style={{ backgroundColor: WINE }}
             >
               📚 Cheers
             </button>
