@@ -85,7 +85,16 @@ export interface ClubMember {
   club_id: string
   user_id: string
   display_name: string
+  is_admin: boolean
   created_at: string
+}
+
+export interface ClubQuote {
+  id: string
+  club_id: string
+  quote: string
+  created_at: string
+  updated_at: string
 }
 
 export interface BookScore {

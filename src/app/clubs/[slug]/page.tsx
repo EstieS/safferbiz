@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createServerSupabaseClient, createAdminClient } from '@/lib/supabase-server'
-import type { Club, ClubMember, Book, BookScore, BookComment, ClubMeeting } from '@/lib/types'
+import type { Club, ClubMember, Book, BookScore, BookComment, ClubMeeting, ClubQuote } from '@/lib/types'
 import BookClubDashboard from './BookClubDashboard'
 
 interface Props {
@@ -63,24 +63,31 @@ export default async function ClubPage({ params }: Props) {
     )
   }
 
-  const [{ data: membersData }, { data: booksData }, { data: scoresData }, { data: commentsData }, { data: meetingsData }] =
-    await Promise.all([
-      admin.from('club_members').select('*').eq('club_id', club.id).order('created_at', { ascending: true }),
-      admin.from('books').select('*').eq('club_id', club.id).order('created_at', { ascending: false }),
-      admin
-        .from('book_scores')
-        .select('*, books!inner(club_id)')
-        .eq('books.club_id', club.id),
-      admin
-        .from('book_comments')
-        .select('*, books!inner(club_id)')
-        .eq('books.club_id', club.id),
-      admin
-        .from('club_meetings')
-        .select('*')
-        .eq('club_id', club.id)
-        .order('meeting_at', { ascending: true }),
-    ])
+  const [
+    { data: membersData },
+    { data: booksData },
+    { data: scoresData },
+    { data: commentsData },
+    { data: meetingsData },
+    { data: quotesData },
+  ] = await Promise.all([
+    admin.from('club_members').select('*').eq('club_id', club.id).order('created_at', { ascending: true }),
+    admin.from('books').select('*').eq('club_id', club.id).order('created_at', { ascending: false }),
+    admin
+      .from('book_scores')
+      .select('*, books!inner(club_id)')
+      .eq('books.club_id', club.id),
+    admin
+      .from('book_comments')
+      .select('*, books!inner(club_id)')
+      .eq('books.club_id', club.id),
+    admin
+      .from('club_meetings')
+      .select('*')
+      .eq('club_id', club.id)
+      .order('meeting_at', { ascending: true }),
+    admin.from('club_quotes').select('*').eq('club_id', club.id).order('created_at', { ascending: true }),
+  ])
 
   const members = (membersData ?? []) as ClubMember[]
   const scores = (scoresData ?? []) as BookScore[]
@@ -92,6 +99,7 @@ export default async function ClubPage({ params }: Props) {
   }))
   const meetings = (meetingsData ?? []) as ClubMeeting[]
   const { nextMeeting, pastMeetings } = splitMeetings(meetings)
+  const quotes = (quotesData ?? []) as ClubQuote[]
 
   return (
     <BookClubDashboard
@@ -101,6 +109,7 @@ export default async function ClubPage({ params }: Props) {
       currentMember={me as ClubMember}
       nextMeeting={nextMeeting}
       pastMeetings={pastMeetings}
+      quotes={quotes}
     />
   )
 }

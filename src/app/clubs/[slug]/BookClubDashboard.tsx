@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Dancing_Script } from 'next/font/google'
 import { createClient } from '@/lib/supabase'
 import { getRandomQuote } from '@/lib/bookClubQuotes'
-import type { Club, ClubMember, Book, ClubMeeting } from '@/lib/types'
+import type { Club, ClubMember, Book, ClubMeeting, ClubQuote } from '@/lib/types'
 
 function firstName(name: string): string {
   return name.split(' ')[0]
@@ -75,6 +75,7 @@ interface Props {
   currentMember: ClubMember
   nextMeeting: ClubMeeting | null
   pastMeetings: ClubMeeting[]
+  quotes: ClubQuote[]
 }
 
 function average(book: Book): number | null {
@@ -170,7 +171,65 @@ function BookLink({ book }: { book: Book | null | undefined }) {
   return <p className="text-sm font-medium text-white">{book.title}</p>
 }
 
-export default function BookClubDashboard({ club, members, books, currentMember, nextMeeting, pastMeetings }: Props) {
+// Keyed by `${bookId}::${memberId}` from the caller so React remounts this
+// (and re-derives the initial score/comment) whenever the selection changes,
+// instead of syncing local state from props via an effect.
+function AdminScoreFields({
+  book,
+  memberId,
+  saving,
+  onSave,
+}: {
+  book: Book
+  memberId: string
+  saving: boolean
+  onSave: (score: string, comment: string) => void
+}) {
+  const existingScore = book.scores?.find((s) => s.club_member_id === memberId)
+  const existingComment = book.comments?.find((c) => c.club_member_id === memberId)
+  const [score, setScore] = useState(existingScore ? String(existingScore.score) : '')
+  const [comment, setComment] = useState(existingComment?.comment ?? '')
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Score</label>
+          <input
+            type="number"
+            min={0}
+            max={10}
+            step={0.5}
+            value={score}
+            onChange={(e) => setScore(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Comment</label>
+          <input
+            type="text"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Optional"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+          />
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onSave(score, comment)}
+        disabled={saving}
+        className="px-4 py-2 rounded-lg text-white font-medium text-sm disabled:opacity-60"
+        style={{ backgroundColor: WINE }}
+      >
+        {saving ? 'Saving...' : 'Save score'}
+      </button>
+    </>
+  )
+}
+
+export default function BookClubDashboard({ club, members, books, currentMember, nextMeeting, pastMeetings, quotes }: Props) {
   const router = useRouter()
   const currentBook = books.find((b) => b.month_label.trim() === currentMonthLabel()) ?? null
   const nextBook = nextMeeting?.book_id ? books.find((b) => b.id === nextMeeting.book_id) ?? null : null
@@ -195,15 +254,32 @@ export default function BookClubDashboard({ club, members, books, currentMember,
   const [meetingTimezone, setMeetingTimezone] = useState(MEETING_TIMEZONES[0].zone)
   const [meetingZoomLink, setMeetingZoomLink] = useState('')
   const [meetingBookId, setMeetingBookId] = useState('')
+  const [activeTab, setActiveTab] = useState<'overview' | 'ratings' | 'admin'>('overview')
   const [showHistory, setShowHistory] = useState(false)
   const [commentsModalBookId, setCommentsModalBookId] = useState<string | null>(null)
   const [collapsedYears, setCollapsedYears] = useState<Set<string>>(new Set())
   const [welcomeQuote, setWelcomeQuote] = useState<string | null>(null)
 
+  const [adminBookId, setAdminBookId] = useState('')
+  const [adminMemberId, setAdminMemberId] = useState('')
+  const [savingAdminScore, setSavingAdminScore] = useState(false)
+
+  const [newQuoteText, setNewQuoteText] = useState('')
+  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null)
+  const [quoteDraftText, setQuoteDraftText] = useState('')
+  const [savingQuoteId, setSavingQuoteId] = useState<string | null>(null)
+
+  const quotesRef = useRef(quotes)
+  useEffect(() => {
+    quotesRef.current = quotes
+  }, [quotes])
+
   useEffect(() => {
     if (sessionStorage.getItem('showWelcomeQuote')) {
       sessionStorage.removeItem('showWelcomeQuote')
-      setWelcomeQuote(getRandomQuote())
+      const list = quotesRef.current
+      const quote = list.length > 0 ? list[Math.floor(Math.random() * list.length)].quote : getRandomQuote()
+      setWelcomeQuote(quote)
     }
   }, [])
 
@@ -313,54 +389,120 @@ export default function BookClubDashboard({ club, members, books, currentMember,
     setEditingBookId(null)
   }
 
-  async function handleSaveBook(bookId: string) {
-    setSaving(bookId)
-    setErrorMsg('')
+  async function saveScoreAndComment(
+    bookId: string,
+    memberId: string,
+    scoreStr: string,
+    commentStr: string
+  ): Promise<string | null> {
     const supabase = createClient()
 
-    const scoreValue = Number(draftScore)
-    if (draftScore.trim() && !Number.isNaN(scoreValue)) {
+    const scoreValue = Number(scoreStr)
+    if (scoreStr.trim() && !Number.isNaN(scoreValue)) {
       const { error } = await supabase
         .from('book_scores')
         .upsert(
-          { book_id: bookId, club_member_id: currentMember.id, score: scoreValue },
+          { book_id: bookId, club_member_id: memberId, score: scoreValue },
           { onConflict: 'book_id,club_member_id' }
         )
-      if (error) {
-        setSaving(null)
-        setErrorMsg(error.message)
-        return
-      }
+      if (error) return error.message
     }
 
-    const trimmedComment = draftComment.trim()
+    const trimmedComment = commentStr.trim()
     if (trimmedComment) {
       const { error } = await supabase
         .from('book_comments')
         .upsert(
-          { book_id: bookId, club_member_id: currentMember.id, comment: trimmedComment },
+          { book_id: bookId, club_member_id: memberId, comment: trimmedComment },
           { onConflict: 'book_id,club_member_id' }
         )
-      if (error) {
-        setSaving(null)
-        setErrorMsg(error.message)
-        return
-      }
+      if (error) return error.message
     } else {
       const { error } = await supabase
         .from('book_comments')
         .delete()
         .eq('book_id', bookId)
-        .eq('club_member_id', currentMember.id)
-      if (error) {
-        setSaving(null)
-        setErrorMsg(error.message)
-        return
-      }
+        .eq('club_member_id', memberId)
+      if (error) return error.message
     }
 
+    return null
+  }
+
+  async function handleSaveBook(bookId: string) {
+    setSaving(bookId)
+    setErrorMsg('')
+    const error = await saveScoreAndComment(bookId, currentMember.id, draftScore, draftComment)
     setSaving(null)
+    if (error) {
+      setErrorMsg(error)
+      return
+    }
     setEditingBookId(null)
+    router.refresh()
+  }
+
+  async function handleSaveAdminScore(bookId: string, memberId: string, scoreStr: string, commentStr: string) {
+    setSavingAdminScore(true)
+    setErrorMsg('')
+    const error = await saveScoreAndComment(bookId, memberId, scoreStr, commentStr)
+    setSavingAdminScore(false)
+    if (error) {
+      setErrorMsg(error)
+      return
+    }
+    router.refresh()
+  }
+
+  async function handleAddQuote(e: React.FormEvent) {
+    e.preventDefault()
+    const text = newQuoteText.trim()
+    if (!text) return
+    setSavingQuoteId('new')
+    setErrorMsg('')
+    const supabase = createClient()
+    const { error } = await supabase.from('club_quotes').insert({ club_id: club.id, quote: text })
+    setSavingQuoteId(null)
+    if (error) {
+      setErrorMsg(error.message)
+      return
+    }
+    setNewQuoteText('')
+    router.refresh()
+  }
+
+  function startEditingQuote(quote: ClubQuote) {
+    setEditingQuoteId(quote.id)
+    setQuoteDraftText(quote.quote)
+  }
+
+  async function handleUpdateQuote(quoteId: string) {
+    const text = quoteDraftText.trim()
+    if (!text) return
+    setSavingQuoteId(quoteId)
+    setErrorMsg('')
+    const supabase = createClient()
+    const { error } = await supabase.from('club_quotes').update({ quote: text }).eq('id', quoteId)
+    setSavingQuoteId(null)
+    if (error) {
+      setErrorMsg(error.message)
+      return
+    }
+    setEditingQuoteId(null)
+    router.refresh()
+  }
+
+  async function handleDeleteQuote(quoteId: string) {
+    if (!window.confirm('Delete this quote?')) return
+    setSavingQuoteId(quoteId)
+    setErrorMsg('')
+    const supabase = createClient()
+    const { error } = await supabase.from('club_quotes').delete().eq('id', quoteId)
+    setSavingQuoteId(null)
+    if (error) {
+      setErrorMsg(error.message)
+      return
+    }
     router.refresh()
   }
 
@@ -626,8 +768,32 @@ export default function BookClubDashboard({ club, members, books, currentMember,
         )}
       </div>
 
-      {books.length > 0 && (
-        <div className="mt-6 bg-white rounded-2xl border border-rose-100 p-4 overflow-x-auto">
+      <div className="mt-6 flex gap-1 border-b border-rose-200">
+        {(
+          [
+            { key: 'overview', label: 'Overview' },
+            { key: 'ratings', label: 'My Ratings' },
+            ...(currentMember.is_admin ? [{ key: 'admin', label: '⚙️ Admin' }] : []),
+          ] as { key: 'overview' | 'ratings' | 'admin'; label: string }[]
+        ).map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className="px-4 py-2 text-sm font-semibold border-b-2 -mb-px"
+            style={
+              activeTab === tab.key
+                ? { color: WINE, borderColor: WINE }
+                : { color: '#9CA3AF', borderColor: 'transparent' }
+            }
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'overview' && books.length > 0 && (
+        <div className="mt-4 bg-white rounded-2xl border border-rose-100 p-4 overflow-x-auto">
           <h2 className="text-lg font-bold text-gray-700 uppercase tracking-wide mb-3">
             Overview
           </h2>
@@ -745,11 +911,9 @@ export default function BookClubDashboard({ club, members, books, currentMember,
         </div>
       )}
 
-      {books.length > 0 && (
-        <h2 className="text-lg font-bold text-gray-700 uppercase tracking-wide mt-8 mb-3">My Ratings</h2>
-      )}
-
-      <div className="space-y-3">
+      {activeTab === 'ratings' && (
+      <>
+      <div className="space-y-3 mt-4">
         {books.length === 0 && (
           <p className="text-sm text-gray-500 text-center py-10">No books yet — add your first pick above.</p>
         )}
@@ -916,6 +1080,137 @@ export default function BookClubDashboard({ club, members, books, currentMember,
           return nodes
         })()}
       </div>
+      </>
+      )}
+
+      {activeTab === 'admin' && currentMember.is_admin && (
+        <div className="mt-4 space-y-6">
+          <div className="bg-white rounded-2xl border border-rose-100 p-5">
+            <h2 className="text-lg font-bold text-gray-700 uppercase tracking-wide mb-3">Manage scores</h2>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Book</label>
+                  <select
+                    value={adminBookId}
+                    onChange={(e) => setAdminBookId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+                  >
+                    <option value="">Select a book</option>
+                    {books.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.month_label} — {b.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Member</label>
+                  <select
+                    value={adminMemberId}
+                    onChange={(e) => setAdminMemberId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+                  >
+                    <option value="">Select a member</option>
+                    {members.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.display_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {(() => {
+                const book = books.find((b) => b.id === adminBookId)
+                if (!book || !adminMemberId) return null
+                return (
+                  <AdminScoreFields
+                    key={`${adminBookId}::${adminMemberId}`}
+                    book={book}
+                    memberId={adminMemberId}
+                    saving={savingAdminScore}
+                    onSave={(score, comment) => handleSaveAdminScore(adminBookId, adminMemberId, score, comment)}
+                  />
+                )
+              })()}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-rose-100 p-5">
+            <h2 className="text-lg font-bold text-gray-700 uppercase tracking-wide mb-3">
+              Manage quotes ({quotes.length})
+            </h2>
+            <form onSubmit={handleAddQuote} className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={newQuoteText}
+                onChange={(e) => setNewQuoteText(e.target.value)}
+                placeholder="Add a new quote..."
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+              />
+              <button
+                type="submit"
+                disabled={savingQuoteId === 'new' || !newQuoteText.trim()}
+                className="px-4 py-2 rounded-lg text-white font-medium text-sm disabled:opacity-60 shrink-0"
+                style={{ backgroundColor: WINE }}
+              >
+                + Add
+              </button>
+            </form>
+            <div className="space-y-2 max-h-[28rem] overflow-y-auto">
+              {quotes.length === 0 && (
+                <p className="text-sm text-gray-400">No quotes yet — add one above.</p>
+              )}
+              {quotes.map((q) => (
+                <div key={q.id} className="flex items-start gap-2 text-sm border-t border-gray-100 pt-2 first:border-t-0 first:pt-0">
+                  {editingQuoteId === q.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={quoteDraftText}
+                        onChange={(e) => setQuoteDraftText(e.target.value)}
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+                      />
+                      <button
+                        onClick={() => handleUpdateQuote(q.id)}
+                        disabled={savingQuoteId === q.id}
+                        className="text-xs font-medium hover:underline shrink-0"
+                        style={{ color: WINE }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingQuoteId(null)}
+                        className="text-xs text-gray-500 hover:text-gray-700 shrink-0"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="flex-1 text-gray-600">{q.quote}</p>
+                      <button
+                        onClick={() => startEditingQuote(q)}
+                        className="text-xs font-medium hover:underline shrink-0"
+                        style={{ color: WINE }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteQuote(q.id)}
+                        disabled={savingQuoteId === q.id}
+                        className="text-xs text-red-500 hover:text-red-700 shrink-0 disabled:opacity-60"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {pastMeetings.length > 0 && (
         <div className="mt-8">
