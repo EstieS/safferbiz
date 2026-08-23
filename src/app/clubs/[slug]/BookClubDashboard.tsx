@@ -178,12 +178,16 @@ function AdminScoreFields({
   book,
   memberId,
   saving,
+  clearing,
   onSave,
+  onClear,
 }: {
   book: Book
   memberId: string
   saving: boolean
+  clearing: boolean
   onSave: (score: string, comment: string) => void
+  onClear: () => void
 }) {
   const existingScore = book.scores?.find((s) => s.club_member_id === memberId)
   const existingComment = book.comments?.find((c) => c.club_member_id === memberId)
@@ -216,22 +220,37 @@ function AdminScoreFields({
           />
         </div>
       </div>
-      <button
-        type="button"
-        onClick={() => onSave(score, comment)}
-        disabled={saving}
-        className="px-4 py-2 rounded-lg text-white font-medium text-sm disabled:opacity-60"
-        style={{ backgroundColor: WINE }}
-      >
-        {saving ? 'Saving...' : 'Save score'}
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onSave(score, comment)}
+          disabled={saving}
+          className="px-4 py-2 rounded-lg text-white font-medium text-sm disabled:opacity-60"
+          style={{ backgroundColor: WINE }}
+        >
+          {saving ? 'Saving...' : 'Save score'}
+        </button>
+        {existingScore && (
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={clearing}
+            className="text-xs text-red-500 hover:text-red-700 disabled:opacity-60"
+          >
+            {clearing ? 'Clearing...' : 'Clear score'}
+          </button>
+        )}
+      </div>
     </>
   )
 }
 
 export default function BookClubDashboard({ club, members, books, currentMember, nextMeeting, pastMeetings, quotes }: Props) {
   const router = useRouter()
-  const currentBook = books.find((b) => b.month_label.trim() === currentMonthLabel()) ?? null
+  const autoCurrentBook = books.find((b) => b.month_label.trim() === currentMonthLabel()) ?? null
+  const currentBook = club.current_book_id
+    ? books.find((b) => b.id === club.current_book_id) ?? autoCurrentBook
+    : autoCurrentBook
   const nextBook = nextMeeting?.book_id ? books.find((b) => b.id === nextMeeting.book_id) ?? null : null
   const years = uniqueYearsDesc(books)
   const rowBanding = computeRowBanding(books)
@@ -263,6 +282,10 @@ export default function BookClubDashboard({ club, members, books, currentMember,
   const [adminBookId, setAdminBookId] = useState('')
   const [adminMemberId, setAdminMemberId] = useState('')
   const [savingAdminScore, setSavingAdminScore] = useState(false)
+  const [clearingAdminScore, setClearingAdminScore] = useState(false)
+
+  const [currentBookId, setCurrentBookId] = useState(club.current_book_id ?? currentBook?.id ?? '')
+  const [savingCurrentBook, setSavingCurrentBook] = useState(false)
 
   const [newQuoteText, setNewQuoteText] = useState('')
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null)
@@ -449,6 +472,40 @@ export default function BookClubDashboard({ club, members, books, currentMember,
     setSavingAdminScore(false)
     if (error) {
       setErrorMsg(error)
+      return
+    }
+    router.refresh()
+  }
+
+  async function handleClearAdminScore(bookId: string, memberId: string) {
+    setClearingAdminScore(true)
+    setErrorMsg('')
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('book_scores')
+      .delete()
+      .eq('book_id', bookId)
+      .eq('club_member_id', memberId)
+    setClearingAdminScore(false)
+    if (error) {
+      setErrorMsg(error.message)
+      return
+    }
+    router.refresh()
+  }
+
+  async function handleSaveCurrentBook(e: React.FormEvent) {
+    e.preventDefault()
+    setSavingCurrentBook(true)
+    setErrorMsg('')
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('clubs')
+      .update({ current_book_id: currentBookId || null })
+      .eq('id', club.id)
+    setSavingCurrentBook(false)
+    if (error) {
+      setErrorMsg(error.message)
       return
     }
     router.refresh()
@@ -1086,6 +1143,32 @@ export default function BookClubDashboard({ club, members, books, currentMember,
       {activeTab === 'admin' && currentMember.is_admin && (
         <div className="mt-4 space-y-6">
           <div className="bg-white rounded-2xl border border-rose-100 p-5">
+            <h2 className="text-lg font-bold text-gray-700 uppercase tracking-wide mb-3">Current book</h2>
+            <form onSubmit={handleSaveCurrentBook} className="flex gap-2">
+              <select
+                value={currentBookId}
+                onChange={(e) => setCurrentBookId(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+              >
+                <option value="">Auto (match today's month)</option>
+                {books.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.month_label} — {b.title}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                disabled={savingCurrentBook}
+                className="px-4 py-2 rounded-lg text-white font-medium text-sm disabled:opacity-60 shrink-0"
+                style={{ backgroundColor: WINE }}
+              >
+                {savingCurrentBook ? 'Saving...' : 'Save'}
+              </button>
+            </form>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-rose-100 p-5">
             <h2 className="text-lg font-bold text-gray-700 uppercase tracking-wide mb-3">Manage scores</h2>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -1129,7 +1212,9 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                     book={book}
                     memberId={adminMemberId}
                     saving={savingAdminScore}
+                    clearing={clearingAdminScore}
                     onSave={(score, comment) => handleSaveAdminScore(adminBookId, adminMemberId, score, comment)}
+                    onClear={() => handleClearAdminScore(adminBookId, adminMemberId)}
                   />
                 )
               })()}

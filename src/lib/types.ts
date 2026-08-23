@@ -77,6 +77,7 @@ export interface Club {
   id: string
   slug: string
   name: string
+  current_book_id: string | null
   created_at: string
 }
 
