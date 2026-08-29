@@ -16,6 +16,7 @@
  *   node scripts/email-logo-request.mjs --test=you@x.com   → mint a token for the first listing + send ONE sample to you, then stop
  *   node scripts/email-logo-request.mjs --limit=1          → send to just the first real recipient
  *   node scripts/email-logo-request.mjs --only=biz@x.com   → send only to the listing(s) with this exact email
+ *   node scripts/email-logo-request.mjs --claimed-only    → only owners who claimed their listing (skip admin-verified)
  *   node scripts/email-logo-request.mjs --include-existing → also email owners whose listing already has a logo
  *   node scripts/email-logo-request.mjs                    → send to everyone for real
  */
@@ -38,6 +39,7 @@ const TOKEN_TTL_DAYS = 60
 
 const DRY_RUN          = process.argv.includes('--dry-run')
 const INCLUDE_EXISTING = process.argv.includes('--include-existing')
+const CLAIMED_ONLY     = process.argv.includes('--claimed-only')
 const LIMIT   = parseInt(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] ?? '0') || null
 const ONLY    = process.argv.find(a => a.startsWith('--only='))?.split('=')[1]?.toLowerCase() ?? null
 const TEST    = process.argv.find(a => a.startsWith('--test='))?.split('=')[1] ?? null
@@ -142,7 +144,7 @@ async function main() {
 
   let query = supabase
     .from('listings')
-    .select('id, business_name, slug, email, city, country, logo_url')
+    .select('id, business_name, slug, email, city, country, logo_url, verified_via, claimed_by_email')
     .eq('status', 'active')
     .eq('is_verified', true)
     .not('email', 'is', null)
@@ -150,6 +152,10 @@ async function main() {
     .order('business_name', { ascending: true })
 
   if (!INCLUDE_EXISTING) query = query.is('logo_url', null)
+  // --claimed-only: just the owners who actively claimed their listing (they know
+  // SafferBiz and expect mail from us). Excludes admin-verified listings whose
+  // owner may not know they're listed.
+  if (CLAIMED_ONLY) query = query.not('claimed_by_email', 'is', null)
 
   const { data: listings, error } = await query
   if (error) {
@@ -186,7 +192,9 @@ async function main() {
 
   const toSend = LIMIT ? recipients.slice(0, LIMIT) : recipients
 
-  console.log(`Found ${recipients.length} verified listing(s) with an email${INCLUDE_EXISTING ? '' : ' and no logo yet'}.`)
+  const claimed = recipients.filter(l => l.claimed_by_email).length
+  console.log(`Found ${recipients.length} ${CLAIMED_ONLY ? 'owner-claimed' : 'verified'} listing(s) with an email${INCLUDE_EXISTING ? '' : ' and no logo yet'}.`)
+  if (!CLAIMED_ONLY) console.log(`   ${claimed} owner-claimed, ${recipients.length - claimed} admin-verified (pass --claimed-only to email just the claimed ones).`)
   if (LIMIT) console.log(`--limit=${LIMIT} → sending to the first ${toSend.length}.`)
   if (dupes.length) console.log(`⚠️  ${dupes.length} email(s) own multiple listings and would receive one email each.`)
   console.log()
@@ -196,7 +204,7 @@ async function main() {
 
   for (const listing of toSend) {
     const location = [listing.city, listing.country].filter(Boolean).join(', ')
-    console.log(`  🏪 ${listing.business_name}${location ? ` — ${location}` : ''}${listing.logo_url ? '  (has logo)' : ''}`)
+    console.log(`  🏪 ${listing.business_name}${location ? ` — ${location}` : ''}  [${listing.claimed_by_email ? 'claimed' : 'admin-verified'}]${listing.logo_url ? ' (has logo)' : ''}`)
     console.log(`     ✉️  ${listing.email}`)
 
     if (DRY_RUN) {
