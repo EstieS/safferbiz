@@ -1,14 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Listing } from '@/lib/types'
 import { CATEGORIES, COUNTRIES, PRODUCT_TAGS } from '@/lib/constants'
+import { resizeLogo } from '@/lib/resizeImage'
 
 type FormState = 'idle' | 'loading' | 'success' | 'error'
+type LogoState = 'idle' | 'busy' | 'error'
 
 export default function ManageForm({ listing, token }: { listing: Listing; token: string }) {
   const [state, setState] = useState<FormState>('idle')
   const [errorMsg, setErrorMsg] = useState('')
+  const [logoUrl, setLogoUrl] = useState<string | null>(listing.logo_url)
+  const [logoState, setLogoState] = useState<LogoState>('idle')
+  const [logoError, setLogoError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [tags, setTags] = useState<string[]>(listing.tags ?? [])
   const [customTag, setCustomTag] = useState('')
   const [sellsOnline, setSellsOnline] = useState(listing.sells_online ?? false)
@@ -46,6 +52,52 @@ export default function ManageForm({ listing, token }: { listing: Listing; token
     setCustomTag('')
   }
 
+  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file
+    if (!file) return
+
+    setLogoState('busy')
+    setLogoError('')
+    try {
+      const { blob, type } = await resizeLogo(file)
+      const fd = new FormData()
+      fd.append('token', token)
+      fd.append('file', new File([blob], 'logo', { type }))
+
+      const res = await fetch(`/api/manage/${listing.slug}/logo`, { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Upload failed')
+
+      setLogoUrl(json.logo_url)
+      setLogoState('idle')
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : 'Upload failed')
+      setLogoState('error')
+    }
+  }
+
+  async function handleLogoRemove() {
+    setLogoState('busy')
+    setLogoError('')
+    try {
+      const res = await fetch(`/api/manage/${listing.slug}/logo`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      if (!res.ok) {
+        const json = await res.json()
+        throw new Error(json.error ?? 'Failed to remove logo')
+      }
+      setLogoUrl(null)
+      setLogoState('idle')
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : 'Failed to remove logo')
+      setLogoState('error')
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setState('loading')
@@ -70,6 +122,55 @@ export default function ManageForm({ listing, token }: { listing: Listing; token
 
   return (
     <form onSubmit={handleSubmit} className="mt-6 bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
+      <div>
+        <label className={label}>Logo</label>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="Current logo" className="w-full h-full object-cover" />
+            ) : (
+              <span
+                className="w-full h-full flex items-center justify-center text-2xl font-bold text-white"
+                style={{ backgroundColor: '#007A4D' }}
+              >
+                {fields.business_name.charAt(0).toUpperCase() || '?'}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={logoState === 'busy'}
+                className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+              >
+                {logoState === 'busy' ? 'Working…' : logoUrl ? 'Replace' : 'Upload logo'}
+              </button>
+              {logoUrl && logoState !== 'busy' && (
+                <button
+                  type="button"
+                  onClick={handleLogoRemove}
+                  className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-gray-400">JPG, PNG or WebP. Square works best — we resize it for you.</p>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="hidden"
+            onChange={handleLogoChange}
+          />
+        </div>
+        {logoError && <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-lg mt-2">{logoError}</p>}
+      </div>
+
       <div>
         <label className={label}>Business Name <span className="text-red-500">*</span></label>
         <input required value={fields.business_name} onChange={(e) => set('business_name', e.target.value)} className={input} />
