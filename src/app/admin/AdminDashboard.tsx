@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import type { Listing, ListingStatus, Event, EventStatus, ListingClaim } from '@/lib/types'
 import { PRODUCT_TAGS, CATEGORIES, COUNTRIES } from '@/lib/constants'
 import { findDuplicates } from '@/lib/dedup'
+import { resizeLogo } from '@/lib/resizeImage'
 
 // ─── App Banner Control ───────────────────────────────────────────────────────
 
@@ -136,7 +137,15 @@ function TagEditor({ listing, onSave }: { listing: Listing; onSave: (tags: strin
   )
 }
 
-function ListingEditor({ listing, onSave }: { listing: Listing; onSave: (data: Partial<Listing>) => void }) {
+function ListingEditor({ listing, onSave, onLogoChange }: {
+  listing: Listing
+  onSave: (data: Partial<Listing>) => void
+  onLogoChange?: (logo_url: string | null) => void
+}) {
+  const [logoUrl, setLogoUrl] = useState<string | null>(listing.logo_url)
+  const [logoBusy, setLogoBusy] = useState(false)
+  const [logoError, setLogoError] = useState('')
+  const logoInputRef = useRef<HTMLInputElement>(null)
   const [fields, setFields] = useState({
     business_name: listing.business_name ?? '',
     description: listing.description ?? '',
@@ -155,9 +164,82 @@ function ListingEditor({ listing, onSave }: { listing: Listing; onSave: (data: P
     setFields(prev => ({ ...prev, [key]: value }))
   }
 
+  async function handleLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setLogoBusy(true)
+    setLogoError('')
+    try {
+      const { blob, type } = await resizeLogo(file)
+      const fd = new FormData()
+      fd.append('file', new File([blob], 'logo', { type }))
+      const res = await fetch(`/api/admin/listings/${listing.id}/logo`, { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Upload failed')
+      setLogoUrl(json.logo_url)
+      onLogoChange?.(json.logo_url)
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setLogoBusy(false)
+    }
+  }
+
+  async function handleLogoRemove() {
+    setLogoBusy(true)
+    setLogoError('')
+    try {
+      const res = await fetch(`/api/admin/listings/${listing.id}/logo`, { method: 'DELETE' })
+      if (!res.ok) {
+        const json = await res.json()
+        throw new Error(json.error ?? 'Failed to remove logo')
+      }
+      setLogoUrl(null)
+      onLogoChange?.(null)
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : 'Failed to remove logo')
+    } finally {
+      setLogoBusy(false)
+    }
+  }
+
   return (
     <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
       <p className="text-xs font-medium text-gray-500 mb-2">Edit Listing Details</p>
+
+      <div>
+        <label className="text-xs text-gray-400">Logo</label>
+        <div className="flex items-center gap-3 mt-0.5">
+          <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 border border-gray-200">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="w-full h-full flex items-center justify-center text-sm font-bold text-white"
+                style={{ backgroundColor: '#007A4D' }}>
+                {fields.business_name.charAt(0).toUpperCase() || '?'}
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => logoInputRef.current?.click()} disabled={logoBusy}
+              className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-60">
+              {logoBusy ? 'Working…' : logoUrl ? 'Replace logo' : 'Upload logo'}
+            </button>
+            {logoUrl && !logoBusy && (
+              <button type="button" onClick={handleLogoRemove}
+                className="px-2 py-1 text-xs border border-gray-300 rounded text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200">
+                Remove
+              </button>
+            )}
+          </div>
+          <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp"
+            className="hidden" onChange={handleLogoFile} />
+        </div>
+        {logoError && <p className="text-xs text-red-600 mt-1">{logoError}</p>}
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
           <label className="text-xs text-gray-400">Business Name</label>
@@ -447,10 +529,11 @@ function EventsPanel({ events: initialEvents }: { events: Event[] }) {
   )
 }
 
-function ClaimsPanel({ claims: initialClaims, listings, onSaveListing }: {
+function ClaimsPanel({ claims: initialClaims, listings, onSaveListing, onLogoChange }: {
   claims: ListingClaim[]
   listings: Listing[]
   onSaveListing: (id: string, data: Partial<Listing>) => void | Promise<void>
+  onLogoChange: (id: string, logo_url: string | null) => void
 }) {
   const [claims, setClaims] = useState(initialClaims)
   const [busy, setBusy] = useState<string | null>(null)
@@ -544,6 +627,7 @@ function ClaimsPanel({ claims: initialClaims, listings, onSaveListing }: {
                     <ListingEditor
                       listing={listing}
                       onSave={async (data) => { await onSaveListing(listing.id, data); setEditingId(null) }}
+                      onLogoChange={(url) => onLogoChange(listing.id, url)}
                     />
                   ) : (
                     <p className="mt-3 text-xs text-red-500">Listing not found — it may have been deleted.</p>
@@ -625,6 +709,11 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
     setExpandedEdit(null)
   }
 
+  // The /logo endpoint persists the change itself — just sync local state.
+  function syncListingLogo(id: string, logo_url: string | null) {
+    setListings((prev) => prev.map((l) => (l.id === id ? { ...l, logo_url } : l)))
+  }
+
   async function deleteListing(id: string) {
     if (!confirm('Delete this listing permanently?')) return
     setBusy(id)
@@ -676,7 +765,7 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
       </div>
 
       {tab === 'events' && <EventsPanel events={initialEvents} />}
-      {tab === 'claims' && <ClaimsPanel claims={initialClaims} listings={listings} onSaveListing={saveListing} />}
+      {tab === 'claims' && <ClaimsPanel claims={initialClaims} listings={listings} onSaveListing={saveListing} onLogoChange={syncListingLogo} />}
       {tab === 'listings' && <div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
@@ -832,7 +921,11 @@ export default function AdminDashboard({ listings: initial, events: initialEvent
                   <TagEditor listing={listing} onSave={(tags) => saveTags(listing.id, tags)} />
                 )}
                 {expandedEdit === listing.id && (
-                  <ListingEditor listing={listing} onSave={(data) => saveListing(listing.id, data)} />
+                  <ListingEditor
+                    listing={listing}
+                    onSave={(data) => saveListing(listing.id, data)}
+                    onLogoChange={(url) => syncListingLogo(listing.id, url)}
+                  />
                 )}
               </div>
             ))}
