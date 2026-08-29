@@ -76,8 +76,8 @@ function buildEmail(listing, manageUrl) {
   const listingUrl = `${SITE}/listings/${listing.slug}`
   const hasLogo = !!listing.logo_url
   const ask = hasLogo
-    ? `I noticed ${listing.business_name} has a logo on its listing already — if you'd like to swap it for a sharper one, now's a good time.`
-    : `${listing.business_name} doesn't have a logo on its listing yet, and a logo makes it stand out a lot more in the directory and on our social posts.`
+    ? `Business owners can now manage their own logo on their listing. ${listing.business_name} already has one, but if you'd like to swap it for a sharper version, you can now do that yourself.`
+    : `Business owners can now add their own logo to their listing. There isn't one on ${listing.business_name} yet, and a logo really helps a listing stand out, both in the directory and in the posts we share on social.`
 
   // Deliberately plain + personal so Gmail treats it as a 1:1 note (Primary tab)
   // rather than a marketing blast: no header banner, no big button, plain-text
@@ -90,9 +90,9 @@ function buildEmail(listing, manageUrl) {
     text:
 `Hi there,
 
-It's Estie from SafferBiz. ${ask}
+It's Estie from SafferBiz, with a quick heads-up about something new. ${ask}
 
-You can now upload one yourself from your private management page:
+Here's your private link to do it:
 ${manageUrl}
 
 Open that link, and the Logo box is right at the top of the form. A few tips:
@@ -114,8 +114,8 @@ SafferBiz`,
     html: `
       <div style="font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #222; line-height: 1.6; max-width: 600px;">
         <p>Hi there,</p>
-        <p>It's Estie from SafferBiz. ${ask}</p>
-        <p>You can now upload one yourself from your private management page:<br/>
+        <p>It's Estie from SafferBiz, with a quick heads-up about something new. ${ask}</p>
+        <p>Here's your private link to do it:<br/>
           <a href="${manageUrl}" style="color: #007A4D;">${manageUrl}</a>
         </p>
         <p>Open that link, and the Logo box is right at the top of the form. A few tips:</p>
