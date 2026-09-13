@@ -84,6 +84,16 @@ function average(book: Book): number | null {
   return total / book.scores.length
 }
 
+const SKIPPED_LABEL = 'Skipped — no book this month'
+
+function isSkipped(book: Book): boolean {
+  return !book.title.trim()
+}
+
+function bookOptionLabel(book: Book): string {
+  return `${book.month_label} — ${isSkipped(book) ? 'Skipped' : book.title}`
+}
+
 function memberName(members: ClubMember[], clubMemberId: string): string {
   return members.find((m) => m.id === clubMemberId)?.display_name ?? 'Unknown'
 }
@@ -156,6 +166,7 @@ function currentMonthLabel(): string {
 
 function BookLink({ book }: { book: Book | null | undefined }) {
   if (!book) return <p className="text-sm text-white/60">—</p>
+  if (isSkipped(book)) return <p className="text-sm text-white/60 italic">{SKIPPED_LABEL}</p>
   if (book.purchase_link) {
     return (
       <a
@@ -245,6 +256,83 @@ function AdminScoreFields({
   )
 }
 
+function EditBookFields({
+  book,
+  saving,
+  onSave,
+}: {
+  book: Book
+  saving: boolean
+  onSave: (fields: { title: string; author: string; monthLabel: string; pickedBy: string; purchaseLink: string }) => void
+}) {
+  const [title, setTitle] = useState(book.title)
+  const [author, setAuthor] = useState(book.author ?? '')
+  const [monthLabel, setMonthLabel] = useState(book.month_label)
+  const [pickedBy, setPickedBy] = useState(book.picked_by ?? '')
+  const [purchaseLink, setPurchaseLink] = useState(book.purchase_link ?? '')
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Month</label>
+          <input
+            required
+            value={monthLabel}
+            onChange={(e) => setMonthLabel(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Picked by</label>
+          <input
+            value={pickedBy}
+            onChange={(e) => setPickedBy(e.target.value)}
+            placeholder="Optional"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+          />
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1">Title</label>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Leave blank to mark this month as skipped"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1">Author</label>
+        <input
+          value={author}
+          onChange={(e) => setAuthor(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1">Amazon link</label>
+        <input
+          type="url"
+          value={purchaseLink}
+          onChange={(e) => setPurchaseLink(e.target.value)}
+          placeholder="https://amazon.com/..."
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={() => onSave({ title, author, monthLabel, pickedBy, purchaseLink })}
+        disabled={saving}
+        className="px-4 py-2 rounded-lg text-white font-medium text-sm disabled:opacity-60"
+        style={{ backgroundColor: WINE }}
+      >
+        {saving ? 'Saving...' : 'Save book'}
+      </button>
+    </div>
+  )
+}
+
 export default function BookClubDashboard({ club, members, books, currentMember, nextMeeting, pastMeetings, quotes }: Props) {
   const router = useRouter()
   const autoCurrentBook = books.find((b) => b.month_label.trim() === currentMonthLabel()) ?? null
@@ -283,6 +371,9 @@ export default function BookClubDashboard({ club, members, books, currentMember,
   const [adminMemberId, setAdminMemberId] = useState('')
   const [savingAdminScore, setSavingAdminScore] = useState(false)
   const [clearingAdminScore, setClearingAdminScore] = useState(false)
+
+  const [editBookId, setEditBookId] = useState('')
+  const [savingEditBook, setSavingEditBook] = useState(false)
 
   const [currentBookId, setCurrentBookId] = useState(club.current_book_id ?? currentBook?.id ?? '')
   const [savingCurrentBook, setSavingCurrentBook] = useState(false)
@@ -494,6 +585,31 @@ export default function BookClubDashboard({ club, members, books, currentMember,
     router.refresh()
   }
 
+  async function handleUpdateBook(
+    bookId: string,
+    fields: { title: string; author: string; monthLabel: string; pickedBy: string; purchaseLink: string }
+  ) {
+    setSavingEditBook(true)
+    setErrorMsg('')
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('books')
+      .update({
+        title: fields.title.trim(),
+        author: fields.author.trim() || null,
+        month_label: fields.monthLabel.trim(),
+        picked_by: fields.pickedBy.trim() || null,
+        purchase_link: fields.purchaseLink.trim() || null,
+      })
+      .eq('id', bookId)
+    setSavingEditBook(false)
+    if (error) {
+      setErrorMsg(error.message)
+      return
+    }
+    router.refresh()
+  }
+
   async function handleSaveCurrentBook(e: React.FormEvent) {
     e.preventDefault()
     setSavingCurrentBook(true)
@@ -633,9 +749,9 @@ export default function BookClubDashboard({ club, members, books, currentMember,
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Title</label>
             <input
-              required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              placeholder="Leave blank to mark this month as skipped"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
             />
           </div>
@@ -728,7 +844,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                 <option value="">No book selected</option>
                 {books.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.month_label} — {b.title}
+                    {bookOptionLabel(b)}
                   </option>
                 ))}
               </select>
@@ -915,7 +1031,9 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                         {abbreviateMonth(book.month_label)}
                       </td>
                       <td className="py-2 pr-3 font-medium text-gray-900 text-[13px] leading-snug min-w-[160px]">
-                        {book.purchase_link ? (
+                        {isSkipped(book) ? (
+                          <span className="italic text-gray-400">Skipped</span>
+                        ) : book.purchase_link ? (
                           <a
                             href={book.purchase_link}
                             target="_blank"
@@ -1006,6 +1124,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
             const myComment = book.comments?.find((c) => c.club_member_id === currentMember.id)
             const avg = average(book)
             const expanded = expandedBookId === book.id
+            const skipped = isSkipped(book)
 
             nodes.push(
               <div key={book.id} className="bg-white rounded-2xl border border-rose-100 p-5">
@@ -1014,34 +1133,42 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                     <p className="text-sm font-bold uppercase tracking-wide" style={{ color: yearColor(years, book.month_label) }}>
                       {book.month_label}
                     </p>
-                    <h2 className="font-semibold text-gray-900">{book.title}</h2>
-                    {book.author && <p className="text-sm text-gray-500">{book.author}</p>}
-                    {book.picked_by && (
-                      <p className="text-xs text-gray-400 mt-1">Picked by {book.picked_by}</p>
-                    )}
-                    {book.purchase_link && (
-                      <a
-                        href={book.purchase_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs hover:underline"
-                        style={{ color: WINE }}
-                      >
-                        View on Amazon ↗
-                      </a>
+                    {skipped ? (
+                      <h2 className="font-semibold text-gray-400 italic">Skipped</h2>
+                    ) : (
+                      <>
+                        <h2 className="font-semibold text-gray-900">{book.title}</h2>
+                        {book.author && <p className="text-sm text-gray-500">{book.author}</p>}
+                        {book.picked_by && (
+                          <p className="text-xs text-gray-400 mt-1">Picked by {book.picked_by}</p>
+                        )}
+                        {book.purchase_link && (
+                          <a
+                            href={book.purchase_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs hover:underline"
+                            style={{ color: WINE }}
+                          >
+                            View on Amazon ↗
+                          </a>
+                        )}
+                      </>
                     )}
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-2xl font-bold" style={{ color: WINE }}>
-                      {avg !== null ? avg.toFixed(1) : '—'}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {book.scores?.length ?? 0}/{members.length} scored
-                    </p>
-                  </div>
+                  {!skipped && (
+                    <div className="text-right shrink-0">
+                      <p className="text-2xl font-bold" style={{ color: WINE }}>
+                        {avg !== null ? avg.toFixed(1) : '—'}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {book.scores?.length ?? 0}/{members.length} scored
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {editingBookId === book.id ? (
+                {skipped ? null : editingBookId === book.id ? (
                   <>
                     <div className="mt-4 flex items-center gap-3">
                       <label className="text-xs font-medium text-gray-500 shrink-0">Your score</label>
@@ -1153,7 +1280,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                 <option value="">Auto (match today's month)</option>
                 {books.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.month_label} — {b.title}
+                    {bookOptionLabel(b)}
                   </option>
                 ))}
               </select>
@@ -1166,6 +1293,39 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                 {savingCurrentBook ? 'Saving...' : 'Save'}
               </button>
             </form>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-rose-100 p-5">
+            <h2 className="text-lg font-bold text-gray-700 uppercase tracking-wide mb-3">Edit book</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Book</label>
+                <select
+                  value={editBookId}
+                  onChange={(e) => setEditBookId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#7B1E3A]"
+                >
+                  <option value="">Select a book</option>
+                  {books.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {bookOptionLabel(b)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {(() => {
+                const book = books.find((b) => b.id === editBookId)
+                if (!book) return null
+                return (
+                  <EditBookFields
+                    key={editBookId}
+                    book={book}
+                    saving={savingEditBook}
+                    onSave={(fields) => handleUpdateBook(editBookId, fields)}
+                  />
+                )
+              })()}
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-rose-100 p-5">
@@ -1182,7 +1342,7 @@ export default function BookClubDashboard({ club, members, books, currentMember,
                     <option value="">Select a book</option>
                     {books.map((b) => (
                       <option key={b.id} value={b.id}>
-                        {b.month_label} — {b.title}
+                        {bookOptionLabel(b)}
                       </option>
                     ))}
                   </select>
@@ -1310,9 +1470,13 @@ export default function BookClubDashboard({ club, members, books, currentMember,
               {pastMeetings.map((m) => (
                 <li key={m.id} className="text-sm text-gray-500">
                   {formatMeetingDate(m.meeting_at)}
-                  {m.book_id && (
-                    <span className="text-gray-400"> — {books.find((b) => b.id === m.book_id)?.title ?? ''}</span>
-                  )}
+                  {m.book_id && (() => {
+                    const meetingBook = books.find((b) => b.id === m.book_id)
+                    if (!meetingBook) return null
+                    return (
+                      <span className="text-gray-400"> — {isSkipped(meetingBook) ? 'Skipped' : meetingBook.title}</span>
+                    )
+                  })()}
                 </li>
               ))}
             </ul>
