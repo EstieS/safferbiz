@@ -7,7 +7,7 @@ import Link from 'next/link'
 
 type State = 'idle' | 'loading' | 'error' | 'done'
 
-export default function ChangePasswordForm({ slug }: { slug: string }) {
+export default function ChangePasswordForm({ slug, backHref = `/clubs/${slug}`, backLabel = 'club' }: { slug: string; backHref?: string; backLabel?: string }) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [state, setState] = useState<State>('idle')
@@ -46,17 +46,17 @@ export default function ChangePasswordForm({ slug }: { slug: string }) {
     <div className="min-h-[60vh] flex items-center justify-center px-4 bg-gradient-to-b from-rose-50 via-white to-amber-50">
       <div className="w-full max-w-sm bg-white rounded-2xl border border-rose-100 p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Change password</h1>
-        <p className="text-sm text-gray-500 mb-6">Set a new password for the book club.</p>
+        <p className="text-sm text-gray-500 mb-6">Set a new password for your account.</p>
 
         {state === 'done' ? (
           <div>
             <p className="text-sm text-green-700 mb-4">Password updated!</p>
             <button
-              onClick={() => router.push(`/clubs/${slug}`)}
+              onClick={() => router.push(backHref)}
               className="w-full py-2.5 rounded-lg text-white font-medium text-sm"
               style={{ backgroundColor: '#7B1E3A' }}
             >
-              Back to club
+              Back to {backLabel}
             </button>
           </div>
         ) : (
@@ -95,8 +95,8 @@ export default function ChangePasswordForm({ slug }: { slug: string }) {
           </form>
         )}
 
-        <Link href={`/clubs/${slug}`} className="block text-center text-xs text-gray-400 hover:text-[#7B1E3A] mt-4">
-          ← Back to club
+        <Link href={backHref} className="block text-center text-xs text-gray-400 hover:text-[#7B1E3A] mt-4">
+          ← Back to {backLabel}
         </Link>
       </div>
     </div>
