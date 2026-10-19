@@ -27,23 +27,6 @@ export default function LibraryTab({ data, me, actions }: TabProps) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl border border-gray-200 p-4">
-        <p className="text-xs font-bold text-gray-500 uppercase mb-1.5">My equipment</p>
-        <div className="grid grid-cols-2 gap-2">
-          {(['dumbbells', 'none'] as Equipment[]).map((eq) => (
-            <button
-              key={eq}
-              onClick={() => eq !== me.equipment && actions.setEquipment(eq)}
-              className={`min-h-12 rounded-xl font-bold text-sm border-2 ${
-                me.equipment === eq ? 'bg-pink-500 border-pink-500 text-white' : 'bg-white border-gray-200 text-gray-700'
-              }`}
-            >
-              {eq === 'dumbbells' ? '🏋️ Adjustable dumbbells' : '🙌 No equipment'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-200 p-4">
         <Filters
           category={category} setCategory={setCategory}
           minutes={minutes} setMinutes={setMinutes}
