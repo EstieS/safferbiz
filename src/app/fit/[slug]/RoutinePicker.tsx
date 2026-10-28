@@ -257,7 +257,7 @@ function CustomForm({ onSubmit }: { onSubmit: (w: CustomWorkout) => void }) {
         </div>
       </div>
       <button type="submit" className="w-full min-h-14 rounded-2xl bg-pink-500 text-white text-lg font-extrabold">
-        Log it ✅
+        Add it
       </button>
     </form>
   )

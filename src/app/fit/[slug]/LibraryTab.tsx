@@ -8,8 +8,29 @@ import {
 import type { RoutineInput, TabProps } from './FitnessDashboard'
 import { Filters, filterRoutines } from './RoutinePicker'
 import { Chip, RoutineMoves, RoutineSummary, Sheet } from './ui'
+import FoodLibrary from './FoodLibrary'
 
-export default function LibraryTab({ data, me, actions }: TabProps) {
+export default function LibraryTab(props: TabProps) {
+  const [section, setSection] = useState<'workouts' | 'food'>('workouts')
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-1 p-1 bg-white rounded-2xl border border-gray-200">
+        {(['workouts', 'food'] as const).map((s) => (
+          <button
+            key={s}
+            onClick={() => setSection(s)}
+            className={`min-h-12 rounded-xl font-bold text-sm ${section === s ? 'bg-sky-500 text-white' : 'text-gray-600'}`}
+          >
+            {s === 'workouts' ? '💪 Workouts' : '🥗 Food habits'}
+          </button>
+        ))}
+      </div>
+      {section === 'workouts' ? <WorkoutLibrary {...props} /> : <FoodLibrary {...props} />}
+    </div>
+  )
+}
+
+function WorkoutLibrary({ data, me, actions }: TabProps) {
   const [category, setCategory] = useState<Category | null>(null)
   const [minutes, setMinutes] = useState<number | null>(null)
   const [showAll, setShowAll] = useState(false)

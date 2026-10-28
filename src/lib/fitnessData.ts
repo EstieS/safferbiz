@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { FitEntry, FitGoal, FitMember, FitRoutine } from './fitness'
+import type { FitEntry, FitGoal, FitHabit, FitHabitLog, FitMember, FitRoutine } from './fitness'
 
 const PAGE = 1000 // Supabase caps responses at 1000 rows, so page through
 
@@ -20,6 +20,8 @@ export interface FitData {
   routines: FitRoutine[]
   goals: FitGoal[]
   entries: FitEntry[]
+  habits: FitHabit[]
+  habitLogs: FitHabitLog[]
 }
 
 /** Loads everything the tracker needs for one group. Works with the admin or browser client. */
@@ -33,7 +35,7 @@ export async function loadFitData(client: SupabaseClient, groupId: string): Prom
   const members = (membersData ?? []) as FitMember[]
   const memberIds = members.map((m) => m.id)
 
-  const [routines, goals, entries] = await Promise.all([
+  const [routines, goals, entries, habits, habitLogs] = await Promise.all([
     fetchAll<FitRoutine>((from, to) =>
       client.from('fit_routines').select('*').eq('group_id', groupId)
         .order('category').order('family').order('minutes').range(from, to)
@@ -49,7 +51,15 @@ export async function loadFitData(client: SupabaseClient, groupId: string): Prom
             .order('day').order('created_at').range(from, to)
         )
       : Promise.resolve([]),
+    fetchAll<FitHabit>((from, to) =>
+      client.from('fit_habits').select('*').eq('group_id', groupId).order('sort_order').order('created_at').range(from, to)
+    ),
+    memberIds.length
+      ? fetchAll<FitHabitLog>((from, to) =>
+          client.from('fit_habit_logs').select('*').in('member_id', memberIds).order('day').range(from, to)
+        )
+      : Promise.resolve([]),
   ])
 
-  return { members, routines, goals, entries }
+  return { members, routines, goals, entries, habits, habitLogs }
 }

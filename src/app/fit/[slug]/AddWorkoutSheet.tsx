@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { formatDay, type Equipment, type FitRoutine } from '@/lib/fitness'
+import type { Equipment, FitRoutine } from '@/lib/fitness'
 import RoutinePicker, { type CustomWorkout } from './RoutinePicker'
 import { Sheet } from './ui'
 
@@ -9,51 +9,42 @@ interface Props {
   open: boolean
   onClose: () => void
   title: string
-  days: string[]
-  initialDay: string
-  today: string
   routines: FitRoutine[]
   equipment: Equipment
-  startMode?: 'browse' | 'surprise'
-  allowCustom?: boolean
-  pickLabel: string
-  onAdd: (day: string, pick: { routine?: FitRoutine; custom?: CustomWorkout }) => Promise<boolean>
+  onEquipmentChange: (equipment: Equipment) => void
+  onAdd: (pick: { routine?: FitRoutine; custom?: CustomWorkout }) => Promise<boolean>
 }
 
-// Mounted fresh each time it opens, so the day picker starts on initialDay
+// Mounted fresh each time it opens, so filters start clean
 export default function AddWorkoutSheet(props: Props) {
   if (!props.open) return null
   return <AddWorkoutSheetInner {...props} />
 }
 
-function AddWorkoutSheetInner({
-  open, onClose, title, days, initialDay, today, routines, equipment, startMode, allowCustom, pickLabel, onAdd,
-}: Props) {
-  const [day, setDay] = useState(initialDay)
+function AddWorkoutSheetInner({ onClose, title, routines, equipment, onEquipmentChange, onAdd }: Props) {
   const [busy, setBusy] = useState(false)
 
   async function add(pick: { routine?: FitRoutine; custom?: CustomWorkout }) {
     if (busy) return
     setBusy(true)
-    const ok = await onAdd(day, pick)
+    const ok = await onAdd(pick)
     setBusy(false)
     if (ok) onClose()
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={title}>
-      <p className="text-xs font-bold text-gray-500 uppercase mb-1.5">Day</p>
-      <div className="grid grid-cols-7 gap-1 mb-5">
-        {days.map((d) => (
+    <Sheet open onClose={onClose} title={title}>
+      <p className="text-xs font-bold text-gray-500 uppercase mb-1.5">My equipment</p>
+      <div className="grid grid-cols-2 gap-2 mb-5">
+        {(['dumbbells', 'none'] as Equipment[]).map((eq) => (
           <button
-            key={d}
-            onClick={() => setDay(d)}
-            className={`min-h-14 rounded-xl flex flex-col items-center justify-center text-xs font-bold border-2 ${
-              d === day ? 'bg-sky-500 border-sky-500 text-white' : 'bg-white border-gray-200 text-gray-700'
+            key={eq}
+            onClick={() => eq !== equipment && onEquipmentChange(eq)}
+            className={`min-h-12 rounded-xl font-bold text-sm border-2 ${
+              equipment === eq ? 'bg-pink-500 border-pink-500 text-white' : 'bg-white border-gray-200 text-gray-700'
             }`}
           >
-            <span>{formatDay(d)}</span>
-            <span className={`text-base ${d === today && d !== day ? 'text-pink-500' : ''}`}>{formatDay(d, { day: 'numeric' })}</span>
+            {eq === 'dumbbells' ? '🏋️ Dumbbells' : '🙌 No equipment'}
           </button>
         ))}
       </div>
@@ -61,10 +52,9 @@ function AddWorkoutSheetInner({
         <RoutinePicker
           routines={routines}
           equipment={equipment}
-          startMode={startMode}
-          pickLabel={pickLabel}
+          pickLabel="Start"
           onPick={(routine) => add({ routine })}
-          onCustom={allowCustom ? (custom) => add({ custom }) : undefined}
+          onCustom={(custom) => add({ custom })}
         />
       </div>
     </Sheet>

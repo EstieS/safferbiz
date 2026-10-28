@@ -59,6 +59,24 @@ export interface FitEntry {
   completed_at: string | null
 }
 
+export interface FitHabit {
+  id: string
+  group_id: string
+  name: string
+  emoji: string
+  points: number
+  active: boolean
+  sort_order: number
+}
+
+export interface FitHabitLog {
+  id: string
+  member_id: string
+  habit_id: string
+  day: string
+  points: number
+}
+
 // ---------------- Rules ----------------
 
 export const CATEGORIES: { key: Category; label: string; emoji: string }[] = [
@@ -209,14 +227,10 @@ export interface WeekSummary {
   streakBonus: number
   goal: number
   pct: number
-  plannedCount: number
-  plannedDone: number
-  unplannedDone: number
   completedCount: number
   minutes: number
   doneCategories: Category[]
   skippedCategories: Category[] // no completed workout this week
-  plannedButSkipped: Category[] // planned at least once, never completed
 }
 
 export function weekSummary(
@@ -229,7 +243,6 @@ export function weekSummary(
   const days = new Set(weekDays(weekStart))
   const mine = entries.filter((e) => e.member_id === memberId && days.has(e.day))
   const done = mine.filter((e) => e.completed_at)
-  const planned = mine.filter((e) => e.planned)
 
   let points = 0
   let streakBonus = 0
@@ -242,7 +255,6 @@ export function weekSummary(
 
   const goal = goalFor(goals, memberId, weekStart)
   const doneCats = new Set(done.map((e) => e.category))
-  const plannedCats = new Set(planned.map((e) => e.category))
 
   return {
     memberId,
@@ -251,14 +263,10 @@ export function weekSummary(
     streakBonus,
     goal,
     pct: goal > 0 ? Math.round((points / goal) * 100) : 0,
-    plannedCount: planned.length,
-    plannedDone: planned.filter((e) => e.completed_at).length,
-    unplannedDone: done.filter((e) => !e.planned).length,
     completedCount: done.length,
     minutes: done.reduce((sum, e) => sum + e.minutes, 0),
     doneCategories: CATEGORIES.map((c) => c.key).filter((c) => doneCats.has(c)),
     skippedCategories: CATEGORIES.map((c) => c.key).filter((c) => !doneCats.has(c)),
-    plannedButSkipped: CATEGORIES.map((c) => c.key).filter((c) => plannedCats.has(c) && !doneCats.has(c)),
   }
 }
 
@@ -271,11 +279,62 @@ export function weekWinner(summaries: WeekSummary[]): string | null {
   return leaders.length === 1 ? leaders[0].memberId : null
 }
 
+// ---------------- Food ----------------
+
+export function foodPointsOnDay(logs: FitHabitLog[], memberId: string, day: string): number {
+  return logs.filter((l) => l.member_id === memberId && l.day === day).reduce((s, l) => s + l.points, 0)
+}
+
+export interface FoodWeekSummary {
+  memberId: string
+  points: number
+  ticks: number
+  perfectDays: number
+  topHabitIds: string[] // ticked most often
+  missedHabitIds: string[] // active habits never ticked this week
+}
+
+export function foodWeekSummary(
+  logs: FitHabitLog[],
+  habits: FitHabit[],
+  memberId: string,
+  weekStart: string
+): FoodWeekSummary {
+  const days = weekDays(weekStart)
+  const mine = logs.filter((l) => l.member_id === memberId && days.includes(l.day))
+  const active = habits.filter((h) => h.active)
+  const counts = new Map<string, number>()
+  for (const l of mine) counts.set(l.habit_id, (counts.get(l.habit_id) ?? 0) + 1)
+  const best = Math.max(0, ...counts.values())
+  const perfectDays = days.filter(
+    (d) => active.length > 0 && active.every((h) => mine.some((l) => l.day === d && l.habit_id === h.id))
+  ).length
+  return {
+    memberId,
+    points: mine.reduce((s, l) => s + l.points, 0),
+    ticks: mine.length,
+    perfectDays,
+    topHabitIds: best > 0 ? [...counts].filter(([, n]) => n === best).map(([id]) => id) : [],
+    missedHabitIds: active.filter((h) => !counts.has(h.id)).map((h) => h.id),
+  }
+}
+
+/** Food head-to-head is raw points: same list for everyone, so it's already fair. */
+export function foodWinner(summaries: FoodWeekSummary[]): string | null {
+  const best = Math.max(0, ...summaries.map((s) => s.points))
+  if (best === 0) return null
+  const leaders = summaries.filter((s) => s.points === best)
+  return leaders.length === 1 ? leaders[0].memberId : null
+}
+
 /** All week starts from the first entry/goal up to (and including) the given week. */
-export function weeksWithActivity(entries: FitEntry[], goals: FitGoal[], upTo: string): string[] {
+export function weeksWithActivity(
+  entries: FitEntry[], goals: FitGoal[], upTo: string, habitLogs: FitHabitLog[] = []
+): string[] {
   const starts = [
     ...entries.map((e) => weekStartOf(e.day)),
     ...goals.map((g) => g.week_start),
+    ...habitLogs.map((l) => weekStartOf(l.day)),
   ].filter((w) => w <= upTo)
   if (starts.length === 0) return [upTo]
   const first = starts.sort()[0]
